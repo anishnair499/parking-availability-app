@@ -15,10 +15,10 @@ import torch #type: ignore
 import torch.nn as nn #type: ignore
 from torch.utils.data import Dataset, DataLoader #type: ignore
 
-SEQ_LEN = 16     
+SEQ_LEN = 60     
 LR         = 0.001
 NUM_SPOTS  = 5
-INPUT_DIM  = NUM_SPOTS + 4   # 5 occupancy + hour_sin/cos + day_sin/cos
+INPUT_DIM  = NUM_SPOTS + 6   # 5 occupancy + hour_sin/cos + day_sin/cos + min_sin_cos
 
 
 
@@ -30,6 +30,8 @@ def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     df["hour_cos"] = np.cos(2 * np.pi * ts.dt.hour / 24)
     df["day_sin"]  = np.sin(2 * np.pi * ts.dt.dayofweek / 7)
     df["day_cos"]  = np.cos(2 * np.pi * ts.dt.dayofweek / 7)
+    df["minute_sin"] = np.sin(2 * np.pi * ts.dt.minute / 60)
+    df["minute_cos"] = np.cos(2 * np.pi * ts.dt.minute / 60)
     return df
 
 
@@ -41,7 +43,7 @@ class OccupancyDataset(Dataset):
     def __init__(self, features: np.ndarray, targets: np.ndarray):
         self.X = torch.tensor(features, dtype=torch.float32)
         self.y = torch.tensor(targets,  dtype=torch.float32)
-        self.seq_len = 16
+        self.seq_len = SEQ_LEN
 
     def __len__(self):
         return len(self.X) - self.seq_len
