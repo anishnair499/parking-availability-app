@@ -1,33 +1,19 @@
-import {View, Text, Image, ImageBackground, ScrollView, StyleSheet, Button} from "react-native"
-const logoImg = require("../assets/images/react-logo.png")
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#2a2e33",
-    padding: 20,
-  },
-  text: {
-    fontSize: 30,
-    color: "#fff",
-    textAlign: "center",
-    fontFamily: "Corptica-Bold",
-  },
-  button: {
-    padding:10,
-    width: 100,
-    backgroundColor: "#fff",
-    borderRadius: 5,
-    marginTop: 20,
-    }
-});
+import { colors, globalStyles } from "./styles/global"
+import {View, Text, Image, ImageBackground, ScrollView, Button} from "react-native"
+const logoImg = require("../assets/images/IMG_9026-removebg-preview.png")
 export default function Index( {navigation}: any) {
  return (
- <View style = {styles.container}>
-  <Text style = {styles.text}>
-    LotLink
-  </Text> 
-  <View style={styles.button}>
-    <Button onPress={() => navigation.navigate("Settings")} title="Settings" />
+ <View style = {{flex: 1,backgroundColor: colors.background}}>
+  <View style = {{justifyContent: "flex-start", alignItems: "center", flex: 1}}>
+    <Image source={logoImg} style={{ width: 300, height: 150 }}
+  />
+  <View style = {{marginTop: 0,}}>
+    <View style={{...globalStyles.box,width:900,height:700}}>
+        <Text style = {{...globalStyles.text}}>
+            Box
+        </Text>
+    </View>
+    </View>
   </View>
  </View>
  );
