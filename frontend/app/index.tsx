@@ -5,12 +5,15 @@ export default function Index( {navigation}: any) {
  return (
  <View style = {{flex: 1,backgroundColor: colors.background}}>
   <View style = {{justifyContent: "flex-start", alignItems: "center", flex: 1}}>
-    <Image source={logoImg} style={{ width: 300, height: 150 }}
-  />
-  <View style = {{marginTop: 0,}}>
+    <Image source={logoImg} style={{ width: 300, height: 150, marginTop:30 }}/>
+  <View style = {{}}>
     <View style={{...globalStyles.box,width:900,height:700}}>
-        <Text style = {{...globalStyles.text}}>
-            Box
+        <Text style = {{...globalStyles.primaryText}}>
+            Welcome To Lotlink. 
+        </Text>
+        <Text style = {{...globalStyles.secondaryText}}>
+          Parking Availiability. Anywhere. Anytime
+          
         </Text>
     </View>
     </View>

@@ -1,11 +1,11 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  background: '#c78ddf',
+  background: '#ffffff',
   header: '#242444',
   surface: '#2a2a4a',
   primary: '#4fc3f7',
-  text: '#ffffff',
+  text: '#000000',
   textSecondary: '#a0a0b0',
   alert: '#ff5252',
 };
@@ -45,10 +45,18 @@ export const globalStyles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  text: {
+  primaryText: {
     color: colors.text,
-    fontSize: 40,
-    fontFamily: 'Montserrat-Bold',
+    fontSize: 35,
+    fontFamily: 'Arial',
     fontWeight: 'bold',
+    textAlign: 'center'
+  },
+  secondaryText: {
+  color: colors.text,
+  fontSize: 20,
+  fontFamily: 'Arial',
+  fontWeight: 'normal',
+  textAlign: 'center',
   }
 });
