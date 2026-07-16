@@ -20,7 +20,7 @@ spot_bias = [0.05, -0.05, 0.1, -0.1, 0.0] # 5 spots some spots might be more pop
 
 def gen_occup():
     np.random.seed(42)
-    timestamps = pd.date_range(start="2024-01-01", end="2024-06-30", freq=f"{15}min")
+    timestamps = pd.date_range(start="2026-07-15", end="2026-09-09", freq=f"{1}min")
     num_spots = 5
     prev = [0] * num_spots
     record = []
@@ -28,7 +28,7 @@ def gen_occup():
     for ts in timestamps:
         is_weekend = ts.weekday() >= 5
         base_probs = weekend_probs if is_weekend else weekday_probs
-        row = {"timestamp": ts}
+        row: dict[str, object] = {"timestamp": ts}
 
         for i in range(num_spots):
             p = base_probs[ts.hour] + spot_bias[i]
