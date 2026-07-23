@@ -1,0 +1,1 @@
+#input: lstm path + recent window data from ayaan 
