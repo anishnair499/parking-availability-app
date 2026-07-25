@@ -8,14 +8,20 @@ will be detected by 2nd layer. (low level = 'last 3 spots were occupied', high l
 test set 20 % training 80 %
 
 """
+#TODO: SET UP CRONJOB WEEKLY HERE NOT NOW BUT AFTER GIVEN THE WEEKS WORTH OF DATA
 
 import numpy as np #type: ignore
 import pandas as pd #type: ignore
 import torch #type: ignore
 import torch.nn as nn #type: ignore
 from torch.utils.data import Dataset, DataLoader #type: ignore
-
-SEQ_LEN = 48     
+from pathlib import Path
+DATA_DIR = Path(__file__).parent
+RESAMPLE_FREQ_MIN = 5
+SEQ_LEN = 48  
+NUM_EPOCHS = 20
+HIDDEN_DIM = 64
+NUM_LAYERS = 2   
 LR         = 0.001
 NUM_SPOTS  = 5
 INPUT_DIM  = NUM_SPOTS + 6   # 5 occupancy + hour_sin/cos + day_sin/cos + min_sin_cos
@@ -34,10 +40,12 @@ def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     df["minute_cos"] = np.cos(2 * np.pi * ts.dt.minute / 60)
     return df
 
-def resample_occupancy(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
+def resample_occupancy(df: pd.DataFrame, freq: str = f"{RESAMPLE_FREQ_MIN}min") -> pd.DataFrame:
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df = df.set_index("timestamp").resample(freq).last().dropna().reset_index()
+    df = df.set_index("timestamp").resample(freq).mean().dropna().reset_index()
+    spot_cols = [c for c in df.columns if c.startswith("spot_")]
+    df[spot_cols] = (df[spot_cols] > 0.5).astype(int)
     return df
 
 FEATURE_COLS = [f"spot_{i}" for i in range(1, NUM_SPOTS + 1)] + \
@@ -75,7 +83,6 @@ class ParkingLSTM(nn.Module):
             nn.Linear(hidden_dim, 32),
             nn.ReLU(),
             nn.Linear(32, num_spots),
-            nn.Sigmoid(),   # sigma💀
         )
 
     def forward(self, x):
@@ -92,6 +99,7 @@ def train(model, loader, optimizer, criterion, device):
         pred = model(X_batch)
         loss = criterion(pred, y_batch)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         total_loss += loss.item()
     return total_loss / len(loader)
@@ -116,8 +124,8 @@ def predict_now(model, recent_df: pd.DataFrame, device) -> dict:
     features = recent_df[FEATURE_COLS].values[-SEQ_LEN:]
     x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
     with torch.no_grad():
-        probs = model(x).squeeze().cpu().numpy()
-    return {f"spot_{i+1}": float(round(p, 3)) for i, p in enumerate(probs)}
+        probs = torch.sigmoid(model(x).squeeze().cpu().numpy())
+    return {f"spot_{i+1}": float(round(p.item(), 3)) for i, p in enumerate(probs)}
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -125,7 +133,7 @@ if __name__ == "__main__":
     
 
     # load data
-    df = pd.read_csv("occupancy_data.csv")
+    df = pd.read_csv(DATA_DIR / "occupancy_data.csv") # TODO: once ayaan makes script for creationg of csv replace path
     df = resample_occupancy(df)
     df = add_time_features(df)
 
@@ -145,25 +153,17 @@ if __name__ == "__main__":
     val_loader   = DataLoader(val_ds,   batch_size=64)
 
     # model, optimizer, loss
-    model     = ParkingLSTM(INPUT_DIM, 64, 2, 5).to(device)
+    model     = ParkingLSTM(INPUT_DIM, HIDDEN_DIM, NUM_LAYERS, NUM_SPOTS).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     # train loop
-    print(f"\nTraining for 20 epochs\n")
-    for epoch in range(1, 21):
+    print(f"\nTraining for {NUM_EPOCHS} epochs\n")
+    for epoch in range(1, NUM_EPOCHS+1):
         train_loss = train(model, train_loader, optimizer, criterion, device)
         val_loss   = evaluate(model, val_loader, criterion, device)
-        print(f"Epoch {epoch:02d}/{20}  train_loss={train_loss}  val_loss={val_loss}")
+        print(f"Epoch {epoch:02d}/{NUM_EPOCHS}  train_loss={train_loss}  val_loss={val_loss}")
 
     # save model
-    torch.save(model.state_dict(), "parking_lstm.pth")
+    torch.save(model.state_dict(), DATA_DIR / "parking_lstm.pth")
     print("\nModel saved")
-    # crowdmeter prediction on the last 48 rows (4 hours memory)
-    recent = df.tail(SEQ_LEN)
-    probs  = predict_now(model, recent, device)
-    print("\nCrowdmeter:")
-    for spot, p in probs.items():
-        bar    = "*" * int(p * 20)
-        status = "OCCUPIED" if p > 0.5 else "likely free"
-        print(f"  {spot}: {bar:20s} {p:.0%}  ({status})")
