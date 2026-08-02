@@ -30,15 +30,6 @@ export default function App() {
         }}  
       />
       <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" color={color} size={size} />
-          ),
-        }}  
-      />
-      <Tabs.Screen
        name="parking"
        options={{
         title: "Parking",
@@ -47,6 +38,16 @@ export default function App() {
         ),
        }}
       />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings" color={color} size={size} />
+          ),
+        }}  
+      />
+      
     </Tabs>
   )
 }
