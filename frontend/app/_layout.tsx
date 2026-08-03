@@ -39,6 +39,15 @@ export default function App() {
        }}
       />
       <Tabs.Screen
+       name="model"
+       options={{
+        title: "Model",
+        tabBarIcon: ({ color, size }) => (
+          <Ionicons name="git-branch" color={color} size={size} />
+        ),
+       }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
