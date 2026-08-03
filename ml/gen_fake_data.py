@@ -20,8 +20,9 @@ spot_bias = [0.05, -0.05, 0.1, -0.1, 0.0] # 5 spots some spots might be more pop
 
 def gen_occup():
     np.random.seed(42)
-    timestamps = pd.date_range(start="2026-07-15", end="2026-09-09", freq=f"{1}min")
+    timestamps = pd.date_range(start="2026-07-15", end="2026-09-09", freq="1min")
     num_spots = 5
+    assert len(spot_bias) == num_spots
     prev = [0] * num_spots
     record = []
 

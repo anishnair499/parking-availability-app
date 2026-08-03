@@ -16,6 +16,7 @@ import torch #type: ignore
 import torch.nn as nn #type: ignore
 from torch.utils.data import Dataset, DataLoader #type: ignore
 from pathlib import Path
+import matplotlib.pyplot as plt
 DATA_DIR = Path(__file__).parent
 RESAMPLE_FREQ_MIN = 5
 SEQ_LEN = 48  
@@ -28,19 +29,17 @@ INPUT_DIM  = NUM_SPOTS + 6   # 5 occupancy + hour_sin/cos + day_sin/cos + min_si
 
 
 
-def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
+def add_time_features(df):
     df = df.copy()
     # sin/cos  makes sure that 0 and 23 arent 23 hours apart but 1 hr apart
     ts = pd.to_datetime(df["timestamp"])
-    df["hour_sin"] = np.sin(2 * np.pi * ts.dt.hour / 24)
-    df["hour_cos"] = np.cos(2 * np.pi * ts.dt.hour / 24)
-    df["day_sin"]  = np.sin(2 * np.pi * ts.dt.dayofweek / 7)
-    df["day_cos"]  = np.cos(2 * np.pi * ts.dt.dayofweek / 7)
-    df["minute_sin"] = np.sin(2 * np.pi * ts.dt.minute / 60)
-    df["minute_cos"] = np.cos(2 * np.pi * ts.dt.minute / 60)
+    for col, max_val in [('hour',24), ('dayofweek', 7), ('minute', 60)]:
+        vals = ts.dt.__getattribute__(col) if col != 'dayofweek' else ts.dt.dayofweek
+        df[f"{col}_sin"] = np.sin(2 * np.pi * vals / max_val)
+        df[f"{col}_cos"] = np.cos(2 * np.pi * vals / max_val)
     return df
 
-def resample_occupancy(df: pd.DataFrame, freq: str = f"{RESAMPLE_FREQ_MIN}min") -> pd.DataFrame:
+def resample_occupancy(df, freq = f"{RESAMPLE_FREQ_MIN}min"):
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.set_index("timestamp").resample(freq).mean().dropna().reset_index()
@@ -49,13 +48,13 @@ def resample_occupancy(df: pd.DataFrame, freq: str = f"{RESAMPLE_FREQ_MIN}min") 
     return df
 
 FEATURE_COLS = [f"spot_{i}" for i in range(1, NUM_SPOTS + 1)] + \
-               ["hour_sin", "hour_cos", "day_sin", "day_cos", "minute_sin", "minute_cos"]
+               ["hour_sin", "hour_cos", "dayofweek_sin", "dayofweek_cos", "minute_sin", "minute_cos"]
 
 
 TARGET_COLS  = [f"spot_{i}" for i in range(1, NUM_SPOTS + 1)]
 
 class OccupancyDataset(Dataset):
-    def __init__(self, features: np.ndarray, targets: np.ndarray, seq_len: int = SEQ_LEN):
+    def __init__(self, features, targets, seq_len = SEQ_LEN):
         self.X = torch.tensor(features, dtype=torch.float32)
         self.y = torch.tensor(targets,  dtype=torch.float32)
         self.seq_len = seq_len
@@ -79,15 +78,13 @@ class ParkingLSTM(nn.Module):
             batch_first=True,
             dropout=0.2 if num_layers > 1 else 0.0,
         )
-        self.fc = nn.Sequential(
-            nn.Linear(hidden_dim, 32),
-            nn.ReLU(),
-            nn.Linear(32, num_spots),
-        )
+        self.fc1 = nn.Linear(hidden_dim, 32)
+        self.fc2 = nn.Linear(32, num_spots)
 
     def forward(self, x):
         out, _ = self.lstm(x)
-        return self.fc(out[:, -1, :])   # use last timestep hidden state
+        out = torch.relu(self.fc1(out[:, -1, :]))
+        return self.fc2(out)   # use last timestep hidden state
 
 
 def train(model, loader, optimizer, criterion, device): 
@@ -99,7 +96,6 @@ def train(model, loader, optimizer, criterion, device):
         pred = model(X_batch)
         loss = criterion(pred, y_batch)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         total_loss += loss.item()
     return total_loss / len(loader)
@@ -116,7 +112,7 @@ def evaluate(model, loader, criterion, device):
     return total_loss / len(loader)
 
 
-def predict_now(model, recent_df: pd.DataFrame, device) -> dict:
+def predict_now(model, recent_df, device):
     """returns seq data kinda like the planet fitness crowdmeter"""
     model.eval()
     recent_df = resample_occupancy(recent_df)
@@ -124,8 +120,12 @@ def predict_now(model, recent_df: pd.DataFrame, device) -> dict:
     features = recent_df[FEATURE_COLS].values[-SEQ_LEN:]
     x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
     with torch.no_grad():
-        probs = torch.sigmoid(model(x).squeeze().cpu().numpy())
-    return {f"spot_{i+1}": float(round(p.item(), 3)) for i, p in enumerate(probs)}
+        probs = torch.sigmoid(model(x)).cpu().numpy()[0]
+    preds = {}
+    for i, p in enumerate(probs):
+        preds[f"spot_{i+1}"] = round(float(p),3)
+    
+    return preds
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -142,12 +142,8 @@ if __name__ == "__main__":
 
     # train/val split 
     split = int(len(features) * 0.8)
-    X_train, X_val = features[:split], features[split:]
-    y_train, y_val = targets[:split],  targets[split:]
-
-    train_ds = OccupancyDataset(X_train, y_train, SEQ_LEN)
-    val_ds   = OccupancyDataset(X_val,   y_val, SEQ_LEN)
-    assert len(val_ds) > 0, f"val split too small for seq_len= {SEQ_LEN}"
+    train_ds = OccupancyDataset(features[:split], targets[:split], SEQ_LEN)
+    val_ds   = OccupancyDataset(features[split-SEQ_LEN:],   targets[split-SEQ_LEN:], SEQ_LEN)
 
     train_loader = DataLoader(train_ds, batch_size=64, shuffle=True)
     val_loader   = DataLoader(val_ds,   batch_size=64)
@@ -156,13 +152,13 @@ if __name__ == "__main__":
     model     = ParkingLSTM(INPUT_DIM, HIDDEN_DIM, NUM_LAYERS, NUM_SPOTS).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     criterion = nn.BCEWithLogitsLoss()
-
+    
     # train loop
     print(f"\nTraining for {NUM_EPOCHS} epochs\n")
     for epoch in range(1, NUM_EPOCHS+1):
         train_loss = train(model, train_loader, optimizer, criterion, device)
         val_loss   = evaluate(model, val_loader, criterion, device)
-        print(f"Epoch {epoch:02d}/{NUM_EPOCHS}  train_loss={train_loss}  val_loss={val_loss}")
+        print(f"Epoch {epoch}/{NUM_EPOCHS} | train_loss={train_loss:.4f}  val_loss={val_loss:.4f}")
 
     # save model
     torch.save(model.state_dict(), DATA_DIR / "parking_lstm.pth")
