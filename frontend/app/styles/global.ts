@@ -54,8 +54,8 @@ export const globalStyles = StyleSheet.create({
   },
   secondaryText: {
   color: colors.text,
-  fontSize: 20,
-  fontFamily: 'Arial',
+  fontSize: 18,
+  fontFamily: 'Montserrat',
   fontWeight: 'normal',
   textAlign: 'center',
   }
