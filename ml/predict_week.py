@@ -1,6 +1,7 @@
 #input: lstm path + recent window data from ayaan 
 #output: a list of readings for the week for each sensor
 import torch 
+import numpy as np
 import torch.nn as nn
 import pandas as pd
 from pathlib import Path
@@ -39,8 +40,22 @@ def forecast_week(model, df, device):
         # first need to create the time features for the new data
         # then need to convert the converting the probs to the parking spot prediction
         # finally add the row to the window and move the window forward 5 mins
+        hr = pred_T.hour
+        day = pred_T.dayofweek
+        min = pred_T.minute
+        time_feats = [
+            np.sin(2* np.pi * hr / 24), 
+            np.cos(2* np.pi * hr / 24), 
+            np.sin(2* np.pi * day / 7), 
+            np.cos(2* np.pi * day / 7), 
+            np.sin(2* np.pi * min / 60), 
+            np.cos(2* np.pi * min / 60), 
+        ]
+        bin_spots = [1.0 if p > 0.5 else 0.0 for p in probs]
+        next_step_feats = bin_spots + time_feats
+        next_tensor = torch.tensor(next_step_feats, dtype=torch.float32).view(1,1,-1).to(device)
+        current_window = torch.cat([current_window[:,1:,:], next_tensor], dim=1)
 
-        pass
 
     return forecast
 
