@@ -2,7 +2,7 @@ import { colors, globalStyles } from "./styles/global"
 import  {View, Text, Image, ImageBackground, ScrollView, Button} from "react-native"
 import Svg, { Line, Rect, Image as SvgImage } from 'react-native-svg';
 const logoImg = require("../assets/images/IMG_9026-removebg-preview.png")
-const carImg = require("/Users/sarvad/parking-availability-app/frontend/assets/images/indexCar.jpeg")
+const carImg = require("../assets/images/indexCar.jpeg")
 export default function Index() {
  return (
   <ScrollView>
