@@ -1,23 +1,36 @@
 import { colors, globalStyles } from "./styles/global"
-import {View, Text, Image, ImageBackground, ScrollView, Button} from "react-native"
+import  {View, Text, Image, ImageBackground, ScrollView, Button} from "react-native"
+import Svg, { Line, Rect, Image as SvgImage } from 'react-native-svg';
 const logoImg = require("../assets/images/IMG_9026-removebg-preview.png")
-export default function Index( {navigation}: any) {
+const carImg = require("/Users/sarvad/parking-availability-app/frontend/assets/images/indexCar.jpeg")
+export default function Index() {
  return (
- <View style = {{flex: 1,backgroundColor: colors.background}}>
-  <View style = {{justifyContent: "flex-start", alignItems: "center", flex: 1}}>
-    <Image source={logoImg} style={{ width: 300, height: 150, marginTop:30 }}/>
-  <View style = {{}}>
+  <ScrollView>
+ <View style = {{flex: 1,backgroundColor: colors.background, justifyContent: "flex-start", alignItems: "center"}}>
+
+    <Image source={logoImg} style={{width:300,height: 150,marginTop:30}}/>
+  
     <View style={{...globalStyles.box,width:900,height:700}}>
         <Text style = {{...globalStyles.primaryText}}>
             Welcome To Lotlink. 
         </Text>
+        
         <Text style = {{...globalStyles.secondaryText}}>
-          Parking Availiability. Anywhere. Anytime
+          Parking Availiability. Anywhere. Anytime.
           
         </Text>
-    </View>
+        
+        <Svg height = "250">
+        <Line x1 = "320" y1 = "30" x2 = "550" y2 = "30" stroke = "black" strokeWidth= "2"/>
+        <SvgImage x="500" y="40" width="150" height="200" href={carImg}/>
+        
+        </Svg>
+          <View style = {{borderWidth: 1.5, marginLeft: 260,marginTop: -200, borderColor: "black", width: 250, height: 200, alignSelf: 'flex-start' }}> 
+          <Text style = {{flexShrink: 1, textAlign: "left", marginLeft: 10, marginTop: 10}}>We are a group of three high-schoolers that created this app for our local Hindu Temple. </Text>
+          <Text style = {{textAlign: "left",marginTop: 10, marginLeft: 10}}>LotLink is an app that provides realtime data about parking, using a variety of sensors. We use an ESP32 microcontroller and an HC-SR04 distance sensor powered by solar power for continuous use. </Text>
+      </View>
     </View>
   </View>
- </View>
+ </ScrollView>
  );
 }

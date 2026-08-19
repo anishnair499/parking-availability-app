@@ -3,6 +3,7 @@ import { useFonts } from "expo-font";
 import * as React from "react";
 import { useState } from "react";
 import { colors } from "./styles/global";
+import {globalStyles} from "./styles/global"
 export default function Settings() {
   const [isDark, setIsDark] = useState(false);
 
@@ -15,14 +16,11 @@ export default function Settings() {
   return (
   <React.Fragment>
    <View style ={{flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center"}}>
-    <Text style = {{color: colors.text, fontSize: 24, fontFamily: "Montserrat-Bold",marginBottom: 200}}>
+    <Text style = {{...globalStyles.primaryText, marginBottom: 550, fontSize: 40}}>
       Settings
     </Text>
    </View>
-   <View style = {{flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center"}}>
-    <Text style = {{color: colors.text, fontSize: 18, fontFamily: "Montserrat-Bold", marginBottom: 10
-    }}>Style</Text>
-   </View>
+   
   </React.Fragment>
   );
 }
