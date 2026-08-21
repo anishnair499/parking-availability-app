@@ -133,7 +133,7 @@ if __name__ == "__main__":
     
 
     # load data
-    df = pd.read_csv(DATA_DIR / "occupancy_data.csv") # TODO: once ayaan makes script for creationg of csv replace path
+    df = pd.read_csv(DATA_DIR / "occupancy_data.csv") # TODO: once ayaan makes script for creation of csv replace path
     df = resample_occupancy(df)
     df = add_time_features(df)
 
