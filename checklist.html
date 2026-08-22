@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sept 6 Sensor Launch</title>
+<title>Parking Launch Tracker</title>
 <style>
 :root{
   --ground:#E9EAE7; --surface:#FFFFFF; --surface-2:#F4F5F2;
@@ -179,10 +179,11 @@ footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);
 <header class="mast">
   <button class="themebtn" id="tt" type="button">Theme</button>
   <p class="eyebrow">Parking Availability &middot; Launch Readiness</p>
-  <h1>Sept 6 Sensor Launch</h1>
-  <p class="sub">Everything outstanding before real sensors go live, grouped by owner. Tick boxes as you go &mdash; progress saves in your own browser.</p>
+  <h1>Parking Launch Tracker</h1>
+  <p class="sub">Two deadlines, not one. Sensors must be capturing data by <strong>Sept 6</strong>; the app itself is due <strong>Oct 15</strong>. Tick boxes as you go &mdash; progress saves in your own browser.</p>
   <div class="meter">
-    <div class="stat"><span class="n" id="days">&mdash;</span><span class="l">Days left</span></div>
+    <div class="stat"><span class="n" id="days">&mdash;</span><span class="l">&rarr; Sept 6 &middot; data</span></div>
+    <div class="stat"><span class="n" id="days2">&mdash;</span><span class="l">&rarr; Oct 15 &middot; app</span></div>
     <div class="stat"><span class="n" id="pct">0%</span><span class="l">Complete</span></div>
     <div class="bar"><i id="fill"></i></div>
   </div>
@@ -196,18 +197,21 @@ footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);
 
 <section>
   <h2 class="sec">Reality check</h2>
-  <h3 class="owner">The forecast cannot be accurate on day one</h3>
+  <h3 class="owner">Sept 6 is a capture deadline, not a code deadline</h3>
   <div class="note" style="margin-top:14px">
-    The data source goes live <em>on</em> Sept 6, so there is no real data to train on before then. Everything in <code>ml/</code> today is trained on synthetic output from <code>gen_fake_data.py</code>. The Sept 6 deliverable is a pipeline that works once data arrives, plus an honest zero-data state &mdash; not a working forecast.
+    Only one thing has to work by Sept 6: <strong>sensors writing data</strong>. Ingestion, ML and every UI fix can be built afterward against readings already banked. Missed readings are the sole unrecoverable failure on this page &mdash; you cannot backfill a sensor that wasn't running. Everything in <code>ml/</code> is trained on synthetic output from <code>gen_fake_data.py</code> until real data accumulates.
+  </div>
+  <div class="note" style="margin-top:12px">
+    <strong>But validate early anyway.</strong> Get <code>ingest.py</code> reading real data within a few days of Sept 6, then leave it alone. The failure to avoid is discovering on Oct 1 that timestamps are wrong or spots are swapped, with five weeks of unusable rows behind you.
   </div>
   <div class="scroll" style="margin-top:16px">
     <table>
       <thead><tr><th>When</th><th>Data on hand</th><th>Best available forecast</th></tr></thead>
       <tbody>
-        <tr><td class="when">Sept 6, hour 0</td><td>nothing</td><td>&ldquo;Collecting data&rdquo; state. No forecast possible.</td></tr>
-        <tr><td class="when">Sept 6, +4h</td><td>48 rows @ 5min</td><td>Live occupancy only; LSTM window barely fills</td></tr>
-        <tr><td class="when">~Sept 13</td><td>~2k rows</td><td>Seasonal baseline (hour &times; weekday averages)</td></tr>
-        <tr><td class="when">~Sept 27</td><td>~6k rows</td><td>LSTM becomes arguable</td></tr>
+        <tr><td class="when">Sept 6</td><td>capture begins</td><td>Live occupancy only. No forecast possible.</td></tr>
+        <tr><td class="when">~Sept 13</td><td>~2k rows &middot; 1 week</td><td>Seasonal baseline becomes viable</td></tr>
+        <tr><td class="when">~Sept 27</td><td>~6k rows &middot; 3 weeks</td><td>LSTM trainable; first honest comparison against the baseline</td></tr>
+        <tr><td class="when">Oct 15</td><td>~11k rows &middot; 5.5 weeks</td><td><strong>App due.</strong> Enough data to decide on evidence which model ships.</td></tr>
       </tbody>
     </table>
   </div>
@@ -263,7 +267,7 @@ service cloud.firestore {
     <li class="task high" data-id="d1-merge">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Merge all three branches into main</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag">Team</span><span class="tag date">Aug 19&ndash;21</span></div>
+        <div class="tags"><span class="tag high">High</span><span class="tag">Team</span><span class="tag date">Aug 21&ndash;28</span></div>
         <details><summary>Why, and the one trap</summary><div class="detail">
           <p>The three work streams have never been merged with each other. <code>ml/predict_week.py</code> writes to <code>frontend/assets/predictions.json</code>, but <code>ml/</code> and <code>frontend/</code> live on <strong>different unmerged branches</strong> &mdash; the producer can never reach the consumer in any single checkout. Nothing can be integration-tested until they coexist.</p>
           <p>All three pairings merge clean today (verified with <code>git merge-tree</code> &mdash; no conflicts). Every day of delay adds drift.</p>
@@ -288,7 +292,7 @@ service cloud.firestore {
     <li class="task high" data-id="ay-guide">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Restore the deleted Firebase guide as reference</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Aug 19&ndash;21</span></div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Aug 21&ndash;28</span></div>
         <details><summary>How, and what to ignore in it</summary><div class="detail">
           <p><code>git show 31493b8:FIREBASE_SETUP_FOR_AYAAN.md</code></p>
           <p>It targets Firestore, so &sect;3 (schema) and &sect;6 (the export script) are <strong>directly usable</strong> &mdash; &sect;6 is a complete working implementation, not a sketch.</p>
@@ -300,7 +304,7 @@ service cloud.firestore {
     <li class="task crit" data-id="ay-ingest">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Write <code>ml/ingest.py</code> &mdash; the piece three TODOs are blocked on</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Aug 22&ndash;28</span></div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
         <details><summary>The two functions</summary><div class="detail">
           <p>Blocks <code>ml/lstm.py:136</code> and <code>ml/predict_week.py:73</code>, both of which still read a synthetic CSV.</p>
           <p><code>load_history()</code> &rarr; all of <code>occupancySnapshots</code> as a DataFrame with columns <code>timestamp,spot_1,spot_2</code> (the shape <code>lstm.py</code> already expects). Incremental &mdash; query <code>where timestamp &gt; last_seen</code>, don't re-download everything each run.</p>
@@ -312,7 +316,7 @@ service cloud.firestore {
     <li class="task" data-id="ay-deps">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Add <code>firebase-admin</code> to requirements, and gitignore the service key <em>first</em></div>
-        <div class="tags"><span class="tag date">Aug 22&ndash;28</span></div>
+        <div class="tags"><span class="tag date">Aug 29&ndash;Sept 5</span></div>
         <details><summary>Order matters</summary><div class="detail">
           <p>Add <code>ml/serviceAccountKey.json</code> to <code>.gitignore</code> <strong>before</strong> downloading the key, not after. That key grants full read/write to the entire database, unlike the device's public API key.</p>
         </div></details>
@@ -322,7 +326,7 @@ service cloud.firestore {
     <li class="task" data-id="ay-cron">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Set up both cron jobs &mdash; hourly forecast, weekly retrain</div>
-        <div class="tags"><span class="tag date">Aug 29&ndash;Sept 1</span></div>
+        <div class="tags"><span class="tag date">Sept 6&ndash;13</span></div>
         <details><summary>Requirements</summary><div class="detail">
           <p>The TODOs are at <code>ml/lstm.py:11</code> and <code>ml/predict_week.py:75</code>.</p>
           <p>Needs a real host with logging and failure alerting, not a laptop crontab &mdash; it has to keep running unattended from Sept 6. Both jobs must <strong>no-op safely on insufficient data</strong> rather than crashing or writing garbage, since for the first week there won't be enough history.</p>
@@ -378,16 +382,17 @@ service cloud.firestore {
       </div></div>
     </li>
 
-    <li class="task crit" data-id="sv-model">
+    <li class="task high" data-id="sv-model">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Fix or remove the Model tab &mdash; it crashes the app</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Aug 22&ndash;28</span></div>
+        <div class="ttl">Stop the Model tab crashing &mdash; stub it until the real page is built</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
         <details><summary>The bug</summary><div class="detail">
           <p><code>frontend/app/model.tsx</code> is, in its entirety:</p>
 <pre><code>export default function Model() {
 
 }</code></pre>
           <p>It returns <code>undefined</code>, and it is a <strong>live registered tab</strong> (<code>_layout.tsx:38-46</code>, titled &ldquo;Model&rdquo;). React throws the moment anyone taps it. This passes <code>tsc</code> cleanly &mdash; it is a runtime error, not a compile error, so no type check will catch it.</p>
+          <p>Cheapest fix is returning a placeholder view or unregistering the tab. The real page is a separate task owned by Anish Jr &mdash; this item is only about not crashing in the meantime.</p>
         </div></details>
       </div></div>
     </li>
@@ -395,7 +400,7 @@ service cloud.firestore {
     <li class="task high" data-id="sv-parking">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Move <code>parking.tsx</code> to Firestore and cut it to 2 real spots</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Aug 22&ndash;28</span></div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 13&ndash;27</span></div>
         <details><summary>Two separate problems</summary><div class="detail">
           <p><strong>Database:</strong> swap <code>firebase/database</code> / <code>onValue</code> for <code>firebase/firestore</code> / <code>onSnapshot</code> on <code>current/state</code>, and read booleans instead of thresholding centimetres client-side.</p>
           <p><strong>Fake spots:</strong> the screen draws 5 rectangles but subscribes to only 2 sensors. Lines 54, 56 and 58 all re-render <code>distance1</code> &mdash; spots 3, 4 and 5 are copies of spot 1. With 2 real sensors going live, cut it to 2.</p>
@@ -406,7 +411,7 @@ service cloud.firestore {
     <li class="task" data-id="sv-cleanup">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Clear the leftover debug UI</div>
-        <div class="tags"><span class="tag date">Aug 29&ndash;Sept 1</span></div>
+        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
         <details><summary>Four items</summary><div class="detail">
           <p><code>parking.tsx:46</code> renders <code>{propertiesShown.toString()}</code> &mdash; the literal text &ldquo;false&rdquo; at 45pt, on screen. It is also a React Native <code>&lt;Text&gt;</code> nested directly inside <code>&lt;Svg&gt;</code>, which isn't a valid SVG child.</p>
           <p><code>parking.tsx:65</code> &mdash; the spot-detail modal body is the word <code>hello</code>.</p>
@@ -419,7 +424,7 @@ service cloud.firestore {
     <li class="task" data-id="sv-misc">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Move <code>styles/global.ts</code> out of <code>app/</code>, and fix the root README</div>
-        <div class="tags"><span class="tag date">Sept 2&ndash;5</span></div>
+        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
         <details><summary>Both are small</summary><div class="detail">
           <p>Expo Router treats <strong>every</strong> file under <code>app/</code> as a route, and <code>global.ts</code> has no default export &mdash; it shows up in the generated router types as a real route. Move it to <code>frontend/styles/</code>.</p>
           <p>The root <code>README.md</code> says the project is &ldquo;AI powered street parking availability detection using <strong>computer vision</strong>&rdquo;. There is no computer vision here &mdash; it's ultrasonic HC-SR04 sensors and an LSTM. It has never been updated since the first commit.</p>
@@ -442,7 +447,7 @@ service cloud.firestore {
     <li class="task high" data-id="aj-spots">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Change spot count from 5 to 2 and retrain</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Aug 22&ndash;28</span></div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 6&ndash;13</span></div>
         <details><summary>Where 5 is hardcoded</summary><div class="detail">
           <p>The number 5 appears in <strong>8+ independent places</strong> with no shared source of truth: <code>ml/lstm.py:27</code>, <code>ml/gen_fake_data.py:24</code>, <code>frontend/app/predictions.tsx:8</code>, and <code>predictions.tsx:129</code> as a bare literal in JSX (<code>{open} / 5 open</code>).</p>
           <p>Worst offender: <code>ml/test_lstm.py:50</code> hardcodes <code>ParkingLSTM(input_dim=11, hidden_dim=64, num_layers=2, num_spots=5)</code> as bare literals, bypassing the constants entirely. Changing <code>NUM_SPOTS</code> silently breaks it. Make everything derive from one value per side.</p>
@@ -453,7 +458,7 @@ service cloud.firestore {
     <li class="task high" data-id="aj-baseline">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Build the seasonal baseline &mdash; it is the launch forecast, not the LSTM</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 2&ndash;5</span></div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 13&ndash;27</span></div>
         <details><summary>The measurements behind this</summary><div class="detail">
           <p>An hour &times; weekday occupancy table (48 numbers per spot) beat the LSTM rollout on every metric on the current data: BCE 0.3255 vs 0.3376, Brier 0.1079 vs 0.1125, accuracy 0.8351 vs 0.8286.</p>
           <p><strong>Important caveat:</strong> that was measured on synthetic data whose generator <em>is</em> an hour-lookup table, so it is rigged in the baseline's favour. It does <strong>not</strong> prove the LSTM is useless on real data.</p>
@@ -465,7 +470,7 @@ service cloud.firestore {
     <li class="task high" data-id="aj-output">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Write forecasts to <code>forecasts/latest</code> instead of a bundled JSON file</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Aug 29&ndash;Sept 1</span></div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 13&ndash;27</span></div>
         <details><summary>Why the current path can never work</summary><div class="detail">
           <p><code>predictions.tsx:6</code> does <code>require("../assets/predictions.json")</code> &mdash; a <strong>build-time</strong> import. Expo bundles assets when the app is built, so a JSON file written by a cron job on a server will never reach anyone's phone. Updating the forecast today would require rebuilding and redeploying the app.</p>
           <p>Replace the write at <code>predict_week.py:77</code> with a Firestore write, and the <code>require()</code> with an <code>onSnapshot</code>. This deletes the broken cross-branch file seam entirely.</p>
@@ -476,7 +481,7 @@ service cloud.firestore {
     <li class="task crit" data-id="aj-coldstart">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Add cold-start guards &mdash; fail loudly on insufficient data</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 2&ndash;5</span></div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
         <details><summary>The silent-garbage bug</summary><div class="detail">
           <p><code>features[-SEQ_LEN:]</code> returns <em>fewer</em> rows when fewer exist, and <code>nn.LSTM</code> accepts variable-length input without complaint. Verified: passing 3 timesteps where 48 were expected returns a clean <code>[1, 5]</code> output with no exception raised.</p>
           <p>So during the first hours after go-live, both entry points will quietly produce confident predictions from almost no data. Assert on window length instead.</p>
@@ -487,7 +492,7 @@ service cloud.firestore {
     <li class="task crit" data-id="aj-gaps">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Handle sensor outages &mdash; resampling silently splices across gaps</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Aug 29&ndash;Sept 1</span></div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
         <details><summary>Verified behaviour</summary><div class="detail">
           <p><code>resample_occupancy</code> at <code>ml/lstm.py:45</code> does <code>.resample().mean().dropna()</code>. Fed a 6-hour outage, the output contains two rows <strong>365 minutes apart sitting adjacent</strong> &mdash; and the model reads them as one 5-minute step.</p>
           <p>Real hardware will have outages. Reindex onto a full time grid, forward-fill short gaps, and refuse to build training windows that span long ones. <code>OccupancyDataset.__getitem__</code> (<code>lstm.py:66</code>) inherits the same bug &mdash; it slices <code>idx : idx+seq_len</code> with no contiguity check.</p>
@@ -498,7 +503,7 @@ service cloud.firestore {
     <li class="task high" data-id="aj-predui">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Update the forecast screen: live data, 2 spots, and a collecting-data state</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 2&ndash;5</span></div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 27&ndash;Oct 10</span></div>
         <details><summary>Four changes</summary><div class="detail">
           <p>Subscribe to <code>forecasts/latest</code> instead of <code>require()</code>. Cut <code>SPOTS</code> (<code>predictions.tsx:8</code>) to 2. Fix the bare literal in <code>{open} / 5 open</code> at <code>:129</code>. Add the &ldquo;collecting data&rdquo; state for the first week when no forecast exists.</p>
           <p>Keep the existing guards &mdash; the flat-data check at <code>:81-87</code> and its banner at <code>:138</code>, plus the out-of-week notice. That self-diagnosis is good code and it is currently the only thing telling you the shipped data is broken.</p>
@@ -509,7 +514,7 @@ service cloud.firestore {
     <li class="task" data-id="aj-json">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Delete the committed <code>predictions.json</code></div>
-        <div class="tags"><span class="tag date">Sept 2&ndash;5</span></div>
+        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
         <details><summary>What's actually wrong with it</summary><div class="detail">
           <p>2,016 rows with exactly <strong>one unique value tuple</strong> across all of them, dated Sep 9&ndash;16 (in the future). Both of the forecast screen's own error banners fire on it permanently.</p>
           <p><strong>Nothing to debug here.</strong> It is stale output from the Aug 2 weights, which predate the sliding-window fix. Running the current code produces 1,365 distinct rows across 2,016 steps &mdash; the model is fine, the file is just old. Once <code>forecasts/latest</code> is live, delete it rather than regenerating.</p>
@@ -520,7 +525,7 @@ service cloud.firestore {
     <li class="task" data-id="aj-ckpt">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Save hyperparameters alongside the model weights</div>
-        <div class="tags"><span class="tag date">Aug 29&ndash;Sept 1</span></div>
+        <div class="tags"><span class="tag date">Sept 13&ndash;27</span></div>
         <details><summary>Why it matters right now</summary><div class="detail">
           <p><code>torch.save(model.state_dict())</code> at <code>lstm.py:164</code> records nothing about <code>SEQ_LEN</code>, <code>NUM_SPOTS</code>, <code>RESAMPLE_FREQ_MIN</code>, or feature order.</p>
           <p>This bites immediately: loading an old 5-spot checkpoint after the switch to 2 spots fails cryptically rather than saying what's wrong. Save a dict with the hyperparameters and a training timestamp.</p>
@@ -528,10 +533,37 @@ service cloud.firestore {
       </div></div>
     </li>
 
+    <li class="task crit" data-id="aj-archive">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Archive every forecast from day one &mdash; or the Model tab is impossible later</div>
+        <div class="tags"><span class="tag crit">Do early</span><span class="tag date">Sept 6&ndash;13</span></div>
+        <details><summary>Why this cannot wait</summary><div class="detail">
+          <p>If the hourly job only ever overwrites <code>forecasts/latest</code>, every past prediction is destroyed as it is replaced. You can then never answer the one question that proves the model works: <em>what did we predict last Tuesday, and what actually happened?</em></p>
+          <p>Write each run to <code>forecastRuns/{timestamp}</code> as well. It is a few lines now and unrecoverable later &mdash; the same shape of mistake as not capturing sensor data.</p>
+        </div></details>
+      </div></div>
+    </li>
+
+    <li class="task high" data-id="aj-modelpage">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Build the Model tab</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 27&ndash;Oct 10</span></div>
+        <details><summary>What goes on it, in priority order</summary><div class="detail">
+          <p><strong>The tab&rsquo;s job is to show the decision, not the architecture.</strong> Nobody is impressed by &ldquo;2 layers, 64 hidden units.&rdquo; They are impressed by evidence that you measured two approaches and picked one.</p>
+          <p><strong>1. Which model is live, and the numbers behind it.</strong> Baseline vs LSTM, head to head, on real data, with the serving one marked. Most projects never build a baseline at all &mdash; showing that the simple method won, if it does, demonstrates judgement rather than weakness.</p>
+          <p><strong>2. Prediction vs reality.</strong> Last week&rsquo;s forecast overlaid on what actually happened. The most honest panel on the page and the one that proves the thing works. Depends entirely on the archiving task above.</p>
+          <p><strong>3. Data health.</strong> Rows collected, days of coverage, gaps detected, last reading received. Doubles as the only visible check on cron jobs running unattended on a server nobody watches.</p>
+          <p><strong>4. Accuracy as data accumulated.</strong> A small chart of accuracy against weeks of training data, telling the cold-start story: nothing on Sept 6, baseline online Sept 13, LSTM overtakes it (or does not) around Sept 27. Free if the weekly retrains log their metrics.</p>
+          <p><strong>5. How it works.</strong> A short ESP32 &rarr; Firestore &rarr; model explainer. Home gestures at the hardware; this is where the ML half gets explained.</p>
+          <p>Feed it from a single <code>models/status</code> document written by the training and forecast jobs &mdash; one cheap read, and it makes the cron jobs self-reporting. Do not count documents in <code>occupancySnapshots</code> to get row counts; that bills a read per document.</p>
+        </div></details>
+      </div></div>
+    </li>
+
     <li class="task" data-id="aj-tests">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Make the tests capable of failing</div>
-        <div class="tags"><span class="tag date">Sept 2&ndash;5</span></div>
+        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
         <details><summary>They currently cannot</summary><div class="detail">
           <p><code>ml/test_lstm.py:61</code> wraps everything in a bare <code>except</code> that prints &ldquo;fail:&rdquo; and then <strong>exits 0</strong>. Verified by pointing it at a missing data file &mdash; exit code 0. It can never fail CI.</p>
           <p>Neither file is actually pytest despite the <code>test_</code> naming. Also commit <code>ml/test_predictweek.py</code>, which is currently untracked and so runs on nobody else's machine.</p>
@@ -555,13 +587,23 @@ service cloud.firestore {
     <li class="task" data-id="dod-key"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">API key rotated</div>
       <details><summary>Detail</summary><div class="detail"><p><code>parking.tsx:17</code> has a Firebase API key committed in plaintext. It is also malformed &mdash; Google keys start <code>AIzaSy</code> and this one has a stray leading <code>Y</code>. Rotate it, move it out of the component, and don't commit the replacement.</p></div></details>
     </div></div></li>
-    <li class="task" data-id="dod-cron"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Hourly forecast job runs and no-ops cleanly on insufficient data</div></div></div></li>
-    <li class="task" data-id="dod-crash"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">App installs, opens, and no tab crashes</div></div></div></li>
-    <li class="task" data-id="dod-live"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Parking screen shows 2 real spots from <code>current/state</code></div></div></div></li>
-    <li class="task" data-id="dod-cold"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Forecast screen shows an honest &ldquo;collecting data&rdquo; state</div></div></div></li>
+    <li class="task" data-id="dod-archive"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Forecast archiving in place before the first forecast runs</div></div></div></li>
     <li class="task" data-id="dod-merged"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">All branches merged to main</div></div></div></li>
   </ul>
-  <div class="note">Explicitly <strong>not</strong> required on Sept 6: an accurate forecast. The data will not exist yet.</div>
+  <div class="note">Explicitly <strong>not</strong> required on Sept 6: a working app, a working forecast, or a trained model. None of that data exists yet, and every bit of it can be built later against readings already banked.</div>
+
+  <div class="ownerhead" style="margin-top:40px">
+    <h3 class="owner">Must be true on Oct 15</h3>
+    <span class="count" data-count="dod2"></span>
+  </div>
+  <ul class="tasks" data-group="dod2">
+    <li class="task" data-id="d2-crash"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">App installs, opens, and no tab crashes</div></div></div></li>
+    <li class="task" data-id="d2-live"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Parking screen shows 2 real spots from <code>current/state</code></div></div></div></li>
+    <li class="task" data-id="d2-forecast"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Forecast screen reads live data, no rebuild required to update it</div></div></div></li>
+    <li class="task" data-id="d2-model"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Model choice made on measured evidence, not assumption</div></div></div></li>
+    <li class="task" data-id="d2-modeltab"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Model tab built, or the tab removed deliberately</div></div></div></li>
+    <li class="task" data-id="d2-cron"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Cron jobs running unattended with visible failure alerting</div></div></div></li>
+  </ul>
 </section>
 
 <section>
@@ -571,11 +613,13 @@ service cloud.firestore {
     <table>
       <thead><tr><th>Dates</th><th>Focus</th></tr></thead>
       <tbody>
-        <tr><td class="when">Aug 19&ndash;21</td><td>Rules published today. Merge branches. Commit existing firmware as-is.</td></tr>
-        <tr><td class="when">Aug 22&ndash;28</td><td>Firmware to Firestore, made reliable. <code>ml/ingest.py</code>. Spot count 5&rarr;2. UI crash fixes.</td></tr>
-        <tr><td class="when">Aug 29&ndash;Sept 1</td><td><strong>Firmware deployed and writing real data.</strong> Cron jobs. Forecast to <code>forecasts/latest</code>.</td></tr>
-        <tr><td class="when">Sept 2&ndash;5</td><td>End-to-end on real data. Baseline. Cold-start states. Buffer.</td></tr>
-        <tr><td class="when">Sept 6</td><td>Go live.</td></tr>
+        <tr><td class="when">Aug 21&ndash;28</td><td>Rules published. Merge branches. Firmware committed, repointed at Firestore.</td></tr>
+        <tr><td class="when">Aug 29&ndash;Sept 5</td><td><strong>Firmware deployed and writing real data.</strong> Service key, dependencies, buffer.</td></tr>
+        <tr><td class="when">Sept 6</td><td><strong>Capture begins. The one date that cannot slip.</strong></td></tr>
+        <tr><td class="when">Sept 6&ndash;13</td><td>Validate real data end to end. <code>ingest.py</code>. Forecast archiving. Cron jobs. Spot count 5&rarr;2.</td></tr>
+        <tr><td class="when">Sept 13&ndash;27</td><td>Baseline live. Retrain on real data. Parking screen to Firestore.</td></tr>
+        <tr><td class="when">Sept 27&ndash;Oct 10</td><td>LSTM vs baseline decided on evidence. Model tab. Forecast screen. UI cleanup.</td></tr>
+        <tr><td class="when">Oct 11&ndash;15</td><td>Polish and buffer. <strong>App due Oct 15.</strong></td></tr>
       </tbody>
     </table>
   </div>
@@ -638,10 +682,13 @@ service cloud.firestore {
     document.getElementById('fill').style.width=pct+'%';
   }
 
-  var deadline=new Date(2026,8,6);
   var today=new Date(); today.setHours(0,0,0,0);
-  var left=Math.round((deadline-today)/86400000);
-  document.getElementById('days').textContent=left>0?left:(left===0?'0':'past');
+  function countdown(el,d){
+    var n=Math.round((d-today)/86400000);
+    document.getElementById(el).textContent=n>0?n:(n===0?'0':'past');
+  }
+  countdown('days', new Date(2026,8,6));
+  countdown('days2', new Date(2026,9,15));
 
   var root=document.documentElement, tt=document.getElementById('tt');
   tt.addEventListener('click',function(){
