@@ -3,7 +3,7 @@ import {Modal, View, Text, StyleSheet, Button, Pressable, useWindowDimensions, S
 import { globalStyles } from './styles/global';
 import Svg, { Line, Rect} from 'react-native-svg';
 import { getDatabase, ref, onValue } from 'firebase/database';
-import { initializeApp } from 'firebase/app';
+import { app } from '../lib/firebase';
 import * as React from "react";
 
 // 35, 91, 234
@@ -13,11 +13,11 @@ export default function Parking() {
   const [distance2, setDistance2] = useState("Loading...")
   const [propertiesShown, showProperties] = useState(false)
   const {width, height} = useWindowDimensions();
-  const firebaseConfig = {
-  apiKey: "YAIzaSyDMkKHElImfxZRMq0Liy3d31tkjNXqQ03M",
-  databaseURL: "https://parking-project-30a86-default-rtdb.firebaseio.com",
-};
-const app = initializeApp(firebaseConfig);
+  // config moved to lib/firebase.ts. it used to be initialised right here in the render body
+  // which meant a new initializeApp call every single render - firebase let it slide only
+  // because the options were identical every time. the model tab needs projectId for
+  // firestore, so once that got added the options stopped matching and this threw
+  // "app already exists with different options". one shared app fixes it for good.
 useEffect(() => {
 
   const db = getDatabase(app);
