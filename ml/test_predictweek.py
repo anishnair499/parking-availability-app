@@ -10,7 +10,7 @@ from lstm import ParkingLSTM, INPUT_DIM, HIDDEN_DIM, NUM_LAYERS, NUM_SPOTS, SEQ_
 from predict_week import forecast_week
 
 rng = np.random.default_rng(0)
-
+torch.manual_seed(0)
 # need enough raw 1 min rows so that after resampling to 5 min buckets we still have SEQ_LEN rows
 # +5 is just extra buffer so resample doesnt drop us below SEQ_LEN
 n_raw_rows = (SEQ_LEN + 5) * RESAMPLE_FREQ_MIN
@@ -46,12 +46,12 @@ for row in forecast:
 
 # THE ACTUAL THING IM TRYING TO CATCH: if the window isnt sliding forward, every
 # step is gonna give back the exact same numbers since its the same input every time
-row0 = [forecast[0][f"spot_{i}"] for i in range(1, NUM_SPOTS + 1)]
-row1 = [forecast[1][f"spot_{i}"] for i in range(1, NUM_SPOTS + 1)]
-row9 = [forecast[9][f"spot_{i}"] for i in range(1, NUM_SPOTS + 1)]
-
-assert not (row0 == row1 == row9), "window isnt moving, still getting the same prediction over and over"
-
+sample = [
+    [forecast[i][f"spot_{s}"] for s in range(1, NUM_SPOTS+1)] 
+    for i in range(0, len(forecast), 50)
+]
+unique = {tuple(row) for row in sample}
+assert len(unique) > 1, "window isnt moving"
 print("passed - window is actually sliding forward now")
 
 # ---- print it out like an actual crowdmeter instead of just numbers ----

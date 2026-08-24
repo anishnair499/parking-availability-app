@@ -9,14 +9,13 @@ test set 20 % training 80 %
 
 """
 #TODO: SET UP CRONJOB WEEKLY HERE NOT NOW BUT AFTER GIVEN THE WEEKS WORTH OF DATA
-
+from datetime import datetime
 import numpy as np #type: ignore
 import pandas as pd #type: ignore
 import torch #type: ignore
 import torch.nn as nn #type: ignore
 from torch.utils.data import Dataset, DataLoader #type: ignore
 from pathlib import Path
-import matplotlib.pyplot as plt
 DATA_DIR = Path(__file__).parent
 RESAMPLE_FREQ_MIN = 5
 SEQ_LEN = 48  
@@ -24,8 +23,8 @@ NUM_EPOCHS = 20
 HIDDEN_DIM = 64
 NUM_LAYERS = 2   
 LR         = 0.001
-NUM_SPOTS  = 5
-INPUT_DIM  = NUM_SPOTS + 6   # 5 occupancy + hour_sin/cos + day_sin/cos + min_sin_cos
+NUM_SPOTS  = 2
+INPUT_DIM  = NUM_SPOTS + 6   # 2 occupancy + hour_sin/cos + day_sin/cos + min_sin_cos
 
 
 
@@ -38,15 +37,60 @@ def add_time_features(df):
         df[f"{col}_sin"] = np.sin(2 * np.pi * vals / max_val)
         df[f"{col}_cos"] = np.cos(2 * np.pi * vals / max_val)
     return df
+def load_checkpoint(path, device):
+    ck = torch.load(path, map_location=device)
+    if not isinstance(ck, dict) or "state_dict" not in ck:
+        raise ValueError("old checkpoint with no metadata in it. retrain with new lstm.py")
+    if ck["num_spots"] != NUM_SPOTS:
+        raise ValueError(
+            f"checkpoint was trained for {ck["num_spots"]} spots but were set to {NUM_SPOTS}. retrain"
+        )
+    if ck["seq_len"] != SEQ_LEN:
+        raise ValueError(f"checkpoint seq_len {ck["seq_len"]} != {SEQ_LEN}. retrain")
+    model = ParkingLSTM(ck["num_spots"] + 6, ck["hidden_dim"], ck["num_layers"], ck["num_spots"])
+    model.load_state_dict(ck["state_dict"])
+    return model.to(device).eval(), ck
 
+max_fill = 3 # 15 mins at 5 min buckets; handles the gaps
 def resample_occupancy(df, freq = f"{RESAMPLE_FREQ_MIN}min"):
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df = df.set_index("timestamp").resample(freq).mean().dropna().reset_index()
     spot_cols = [c for c in df.columns if c.startswith("spot_")]
-    df[spot_cols] = (df[spot_cols] > 0.5).astype(int)
-    return df
+    # reindex onto the full time grid. dropna fails
+    g = df.set_index("timestamp").resample(freq).mean()
+    # short holes get filled and long ones stay as nan so no traingin happens
+    g[spot_cols] = g[spot_cols].ffill(limit=max_fill)
+    binned = (g[spot_cols] > 0.5).astype(float)
+    g[spot_cols] = binned.where(g[spot_cols].notna())
+    return g.reset_index()
+def check_window(df):
+    if len(df) < SEQ_LEN:
+        hours = SEQ_LEN * RESAMPLE_FREQ_MIN / 60
+        raise ValueError(
+            f'need {SEQ_LEN} resampled rows (~{hours:.1f}h of readings) but only got {len(df)}. ' "sensors prolly havent been running long enough yet"
+        )
 
+def contiguous_blocks(df):
+    """runs of rows with nothing missing. windows must never straddle a gap"""
+
+    spot_cols = [c for c in df.columns if c.startswith("spot_")]
+    ok = df[spot_cols].notna().all(axis=1).to_numpy()
+    blocks, start = [], None
+    for i, good in enumerate(ok):
+        if good and start is None:
+            start = i
+        elif not good and start is not None:
+            blocks.append((start, i))
+            start = None
+    if start is not None:
+        blocks.append((start, len(ok)))
+    return blocks
+
+def window_starts(blocks, seq_len = SEQ_LEN):
+    out = []
+    for a, b in blocks:
+        out.extend(range(a,b-seq_len))
+    return out
 FEATURE_COLS = [f"spot_{i}" for i in range(1, NUM_SPOTS + 1)] + \
                ["hour_sin", "hour_cos", "dayofweek_sin", "dayofweek_cos", "minute_sin", "minute_cos"]
 
@@ -54,19 +98,21 @@ FEATURE_COLS = [f"spot_{i}" for i in range(1, NUM_SPOTS + 1)] + \
 TARGET_COLS  = [f"spot_{i}" for i in range(1, NUM_SPOTS + 1)]
 
 class OccupancyDataset(Dataset):
-    def __init__(self, features, targets, seq_len = SEQ_LEN):
+    def __init__(self, features, targets, seq_len=SEQ_LEN, starts = None):
         self.X = torch.tensor(features, dtype=torch.float32)
-        self.y = torch.tensor(targets,  dtype=torch.float32)
+        self.y = torch.tensor(targets, dtype=torch.float32)
         self.seq_len = seq_len
+        # starts = which indexes are allowed to start a window. if. you dont apass it you get the old behavior, 
+        #
+        if starts is None:
+            starts = list(range(max(0, len(self.X) - seq_len)))
+        self.starts = starts
 
     def __len__(self):
-        return max(0, len(self.X) - self.seq_len)
-
-
+        return len(self.starts)
     def __getitem__(self, idx):
-        x = self.X[idx : idx + self.seq_len]           
-        y = self.y[idx + self.seq_len]                 
-        return x, y
+        i = self.starts[idx]
+        return self.X[i : i + self.seq_len], self.y[i + self.seq_len]
 
 class ParkingLSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_spots):
@@ -116,6 +162,7 @@ def predict_now(model, recent_df, device):
     """returns seq data kinda like the planet fitness crowdmeter"""
     model.eval()
     recent_df = resample_occupancy(recent_df)
+    check_window(recent_df)
     recent_df = add_time_features(recent_df)
     features = recent_df[FEATURE_COLS].values[-SEQ_LEN:]
     x = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
@@ -137,14 +184,21 @@ if __name__ == "__main__":
     df = resample_occupancy(df)
     df = add_time_features(df)
 
+    blocks = contiguous_blocks(df)
+    print(f"{len(blocks)} contiguous blocks, {len(df)} rows total")
     features = df[FEATURE_COLS].values
     targets  = df[TARGET_COLS].values
 
     # train/val split 
     split = int(len(features) * 0.8)
-    train_ds = OccupancyDataset(features[:split], targets[:split], SEQ_LEN)
-    val_ds   = OccupancyDataset(features[split-SEQ_LEN:],   targets[split-SEQ_LEN:], SEQ_LEN)
+    starts = window_starts(blocks)
+    train_starts = [i for i in starts if i + SEQ_LEN < split]
+    val_starts = [i for i in starts if i >= split - SEQ_LEN]
 
+
+    train_ds = OccupancyDataset(features, targets, SEQ_LEN, train_starts)
+    val_ds   = OccupancyDataset(features, targets, SEQ_LEN, val_starts)
+    print(f"{len(train_ds)} train windows, {len(val_ds)} val windows")
     train_loader = DataLoader(train_ds, batch_size=64, shuffle=True)
     val_loader   = DataLoader(val_ds,   batch_size=64)
 
@@ -161,5 +215,14 @@ if __name__ == "__main__":
         print(f"Epoch {epoch}/{NUM_EPOCHS} | train_loss={train_loss:.4f}  val_loss={val_loss:.4f}")
 
     # save model
-    torch.save(model.state_dict(), DATA_DIR / "parking_lstm.pth")
-    print("\nModel saved")
+    torch.save({
+        "state_dict": model.state_dict(),
+        "num_spots": NUM_SPOTS,
+        "seq_len": SEQ_LEN,
+        "resample_freq_min": RESAMPLE_FREQ_MIN,
+        "hidden_dim" : HIDDEN_DIM,
+        "num_layers": NUM_LAYERS,
+        "feature_cols": FEATURE_COLS,
+        "trained_at": datetime.now().isoformat(timespec="seconds"),
+    }, DATA_DIR / "parking_lstm.pth")
+print("\nModel saved")

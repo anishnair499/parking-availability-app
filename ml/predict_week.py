@@ -6,7 +6,7 @@ import torch.nn as nn
 import pandas as pd
 from pathlib import Path
 from lstm import (
-    ParkingLSTM, resample_occupancy, add_time_features, FEATURE_COLS,
+    ParkingLSTM, resample_occupancy,load_checkpoint, check_window, add_time_features, FEATURE_COLS,
     SEQ_LEN, INPUT_DIM, NUM_LAYERS, NUM_SPOTS, HIDDEN_DIM, RESAMPLE_FREQ_MIN, DATA_DIR
 )
 import json
@@ -15,6 +15,7 @@ from datetime import timedelta
 
 def forecast_week(model, df, device):
     df = resample_occupancy(df)
+    check_window(df)
     df = add_time_features(df)
 
     window_data = df[FEATURE_COLS].values[-SEQ_LEN:]
@@ -63,20 +64,26 @@ def forecast_week(model, df, device):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Running on: {device}")
-    input_dim = NUM_SPOTS + 6
-    
-    model = ParkingLSTM(input_dim, HIDDEN_DIM, NUM_LAYERS, NUM_SPOTS)
-    model.load_state_dict(torch.load(DATA_DIR / "parking_lstm.pth", map_location=device))
-    model.to(device)
-    model.eval()
-    inputFile = DATA_DIR / "occupancy_data.csv"
-    df = pd.read_csv(inputFile) #TODO: get file name from ayaan
-    forecast_data = forecast_week(model, df, device)
+    model, ck = load_checkpoint(DATA_DIR / "parking_lstm.pth", device)
+    print(f"loaded model trained {ck['trained_at']} for {ck["num_spots"]} spots")
+    from datetime import datetime, timezone
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+
+    DATA_DIR = Path(__file__).parent
+
+    def _db():
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app(credentials.Certificate(DATA_DIR / "serviceAccountKey.json")) 
+        return firestore.client()
+    def publish_forecast(forecast, model_name="lstm"):
+        db = _db()
+        ran_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        payload = {"generatedAt": ran_at, "model": model_name, "points": forecast}
+
+        db.collection("forecasts").document("latest").set(payload)
+        db.collection("forecastRuns").document(ran_at).set(payload)
+
+        print(f"published {len(forecast)} points, archived as forecastRuns/{ran_at}")         
     #TODO: SET UP A CRONJOB HOURLY HERE NOT NOW BUT LATER UNTIL GIVEN FIRST 4 HOURS OF DATA 
     # AND THEN SLIDING WINDOW CAN BE USED
-    output_json_path = DATA_DIR.parent / "frontend" / "assets" / "predictions.json" 
-    #make sure folders exist
-    output_json_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_json_path, "w") as file:
-        json.dump(forecast_data,file, indent=4)
-    
