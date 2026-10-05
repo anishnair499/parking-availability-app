@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFonts } from "expo-font";
-import { colors, globalStyles } from "./styles/global";
+import { colors, globalStyles } from "../components/styles/global";
 
 const rows = require("../assets/predictions.json");
 

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import {Modal, View, Text, StyleSheet, Button, Pressable, useWindowDimensions, ScrollView} from 'react-native';
-import { globalStyles } from './styles/global';
+import { globalStyles } from '../components/styles/global';
 import Svg, { Line, Rect} from 'react-native-svg';
 import { getDatabase, ref, onValue } from 'firebase/database';
 import { app } from '../lib/firebase';
 import * as React from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import ParkingLotLayout from '../components/ParkingLotLayout';
+
 
 // 35, 91, 234
 
@@ -39,26 +42,11 @@ useEffect(() => {
 }, []);
   
   return(
-    
-    <View style = {{flex: 1}}>
-      
-      <Svg style = {{width: 400, height: 700, alignContent:"center"}}>
-        <Text style = {{...globalStyles.primaryText, paddingTop:100, fontSize:45}}>{propertiesShown.toString()}</Text>
-        <Line x1 = "10" y1 = "200" x2 = "375" y2 = "200" stroke = "black" strokeWidth = "2" />
-        {parseInt(distance1, 10) < 30 ? <Rect x = "10" y = "205" height = "90" width = "188" fill = "red"></Rect>:<Rect onPress={
-          () => {showProperties(propertiesShown => true)}
-        } x = "10" y = "205" height = "90" width = "188" fill = "green"></Rect>}
-        <Line x1 = "10" y1 = "300" x2 = "375" y2 = "300" stroke = "black" strokeWidth = "2" />
-        {parseInt(distance2, 10) < 30 ? <Rect x = "10" y = "305" height = "90" width = "188" fill = "red"></Rect>:<Rect x = "10" y = "305" height = "90" width = "188" fill = "green"></Rect> }
-        <Line x1 = "10" y1 = "400" x2 = "375" y2 = "400" stroke = "black" strokeWidth = "2" />
-        {parseInt(distance1, 10) < 30 ? <Rect x = "10" y = "405" height = "90" width = "188" fill = "red"></Rect>:<Rect x = "10" y = "405" height = "90" width = "188" fill = "green"></Rect> }
-        <Line x1 = "10" y1 = "500" x2 = "375" y2 = "500" stroke = "black" strokeWidth = "2" />
-        {parseInt(distance1, 10) < 30 ? <Rect x = "10" y = "505" height = "90" width = "188" fill = "red"></Rect>:<Rect x = "10" y = "505" height = "90" width = "188" fill = "green"></Rect> }
-        <Line x1 = "10" y1 = "600" x2 = "375" y2 = "600" stroke = "black" strokeWidth = "2" />
-        {parseInt(distance1, 10) < 30 ? <Rect x = "10" y = "605" height = "90" width = "188" fill = "red"></Rect>:<Rect x = "10" y = "605" height = "90" width = "188" fill = "green"></Rect> }
-        <Line x1 = "200" y1 = "200" x2 = "200" y2 = "700" stroke = "black" strokeWidth = "2" />
-       
-      </Svg>
+  <ScrollView>
+    <View style = {{flex: 1, alignContent: 'center'}}>
+      <View style = {{alignContent: 'center'}}>
+        <ParkingLotLayout/>
+      </View>
       <Modal transparent={true} visible={propertiesShown}>
         <View style={{ backgroundColor: "#000000aa", flex: 1}}>
           <View style = {{backgroundColor: 'white',margin: 100, borderRadius: 10}}>
@@ -69,5 +57,6 @@ useEffect(() => {
       </Modal>
     {/* Parking Lot 1 */}
     </View>
+    </ScrollView>
   );
 }

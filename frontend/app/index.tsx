@@ -1,4 +1,4 @@
-import { colors, globalStyles } from "./styles/global"
+import { colors, globalStyles } from "../components/styles/global"
 import  {View, Text, Image, ImageBackground, ScrollView, Button} from "react-native"
 import Svg, { Line, Rect, Image as SvgImage } from 'react-native-svg';
 const logoImg = require("../assets/images/IMG_9026-removebg-preview.png")
@@ -12,7 +12,7 @@ export default function Index() {
   
     <View style={{...globalStyles.box,width:900,height:700}}>
         <Text style = {{...globalStyles.primaryText}}>
-            Welcome To Lotlink. 
+            Welcome To LotLink. 
         </Text>
         
         <Text style = {{...globalStyles.secondaryText}}>
@@ -27,9 +27,10 @@ export default function Index() {
         </Svg>
           <View style = {{borderWidth: 1.5, marginLeft: 260,marginTop: -200, borderColor: "black", width: 250, height: 200, alignSelf: 'flex-start' }}> 
           <Text style = {{flexShrink: 1, textAlign: "left", marginLeft: 10, marginTop: 10}}>We are a group of three high-schoolers that created this app for our local Hindu Temple. </Text>
-          <Text style = {{textAlign: "left",marginTop: 10, marginLeft: 10}}>LotLink is an app that provides realtime data about parking, using a variety of sensors. We use an ESP32 microcontroller and an HC-SR04 distance sensor powered by solar power for continuous use. </Text>
+          <Text style = {{textAlign: "left",marginTop: 10, marginLeft: 10}}>LotLink is an app that provides realtime data about parking, using a variety of sensors. We use microcontroller and an HC-SR04 distance sensor powered by solar power for continuous use. </Text>
       </View>
     </View>
+    <Button title = "Find Parking Now"></Button>
   </View>
  </ScrollView>
  );

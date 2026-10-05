@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { useFonts } from "expo-font";
 import { doc, onSnapshot } from "firebase/firestore";
 import Svg, { Line, Polyline, Rect } from "react-native-svg";
-import { colors, globalStyles } from "./styles/global";
+import { colors, globalStyles } from "../components/styles/global";
 import { db } from "../lib/firebase";
 
 const font = "Montserrat-Bold";
