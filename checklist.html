@@ -171,6 +171,16 @@ footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);
   .themebtn{position:static;margin-top:18px}
   .mast{padding-top:32px}
 }
+/* ---- landed-since list + status tags (sept 7 revision) ---- */
+ul.landed{list-style:none;margin:14px 0 0;padding:0;background:var(--surface);border:1px solid var(--rule-soft)}
+ul.landed li{display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule-soft);font-size:14px;color:var(--ink-soft);align-items:flex-start}
+ul.landed li:last-child{border-bottom:none}
+ul.landed .tick{flex:none;width:17px;height:17px;margin-top:2px;background:var(--ok);position:relative}
+ul.landed .tick::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(43deg)}
+ul.landed strong{color:var(--ink);font-weight:600}
+.tag.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.tag.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.alert.warn{background:var(--warn-bg);border-color:var(--warn)}
 </style>
 </head>
 <body>
@@ -178,11 +188,11 @@ footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);
 
 <header class="mast">
   <button class="themebtn" id="tt" type="button">Theme</button>
-  <p class="eyebrow">Parking Availability &middot; Launch Readiness</p>
+  <p class="eyebrow">Parking Availability &middot; Launch Readiness &middot; revised Oct 4</p>
   <h1>Parking Launch Tracker</h1>
-  <p class="sub">Two deadlines, not one. Sensors must be capturing data by <strong>Sept 6</strong>; the app itself is due <strong>Oct 15</strong>. Tick boxes as you go &mdash; progress saves in your own browser.</p>
+  <p class="sub">Sept 6 is a month behind us. One deadline left: the app is due <strong>Oct 15</strong>, and the LSTM has to ship. This revision folds in the two Oct 4 pushes (Ayaan's <code>backend/mlmodel.py</code> on <code>main</code>, Sarvad's <code>e3f299f</code> on <code>develop_sarvad</code>) and the ML fixes Anish Jr has made locally but not yet committed. Tick boxes as you go &mdash; progress saves in your own browser.</p>
   <div class="meter">
-    <div class="stat"><span class="n" id="days">&mdash;</span><span class="l">&rarr; Sept 6 &middot; data</span></div>
+    <div class="stat"><span class="n" id="days">&mdash;</span><span class="l">days since Sept 6</span></div>
     <div class="stat"><span class="n" id="days2">&mdash;</span><span class="l">&rarr; Oct 15 &middot; app</span></div>
     <div class="stat"><span class="n" id="pct">0%</span><span class="l">Complete</span></div>
     <div class="bar"><i id="fill"></i></div>
@@ -190,89 +200,142 @@ footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);
 </header>
 
 <div class="alert">
-  <h2>Check the Firestore rules tab today</h2>
-  <p>The database has test documents but <strong>no published rules</strong>, which means it is almost certainly still in test mode. Test mode is <code>allow read, write: if request.time &lt; timestamp.date(...)</code> &mdash; wide open now, and it <strong>hard-fails on its expiry date</strong>, roughly 30 days after the database was created.</p>
-  <p>If it was created in mid-August, that expiry lands within days of Sept 6. Every read and write starts returning permission-denied, and the symptoms &mdash; writes silently failing, app showing stale data &mdash; look exactly like firmware or network bugs. Five minutes to fix now.</p>
+  <h2>Still no proof that any real history exists. 11 days left. Look in the console first.</h2>
+  <p>Ayaan's new <code>backend/mlmodel.py</code> (&ldquo;ml model file for anish&rdquo;) is the first sign anyone has read data back, but it is a 38-line script that only prints documents from <code>parkingLots/lot1/spots/A1/obervations</code> (misspelled, one spot) and has a hardcoded <code>C:/Users/aites/...</code> key path. Nothing in the repo shows how many rows are there. And in <code>mlmodeldata.py</code>, <code>obervations</code> is only written <em>inside the connection-error handler</em>, so what is in that collection may be outage records and not readings.</p>
+  <p>This still cannot be checked from the repo &mdash; someone with Firebase console access has to open Firestore and look. Which path holds real readings, how many days back they go, and whether both spots are covered decides the whole ML schedule, including whether the LSTM can be trained on real data in time. The test-mode rules expiry is also still unverified and is probably past due if the database was created in mid-August.</p>
+</div>
+
+<div class="alert warn">
+  <h2>Pull first, but not with <code>--ff-only</code> any more</h2>
+  <p>Local <code>main</code> has diverged: it is 2 commits behind <code>origin/main</code> (Ayaan's <code>246b55d</code> and the merge <code>d5ca71c</code>, both Oct 4) and 1 commit ahead (<code>1e131a7</code>, the last checklist revision), so a fast-forward will fail. There are also uncommitted rewrites of <code>index.tsx</code>, <code>parking.tsx</code>, <code>settings.tsx</code> and <code>global.ts</code> in the working tree. The decision is that Sarvad's versions win, but stash them first rather than discarding them.</p>
+<pre><code>git stash push -m "local frontend rewrites" -- frontend/app
+git pull --no-rebase</code></pre>
+  <p>Do <em>not</em> merge <code>develop_sarvad</code> as part of this. That is a separate task below because it conflicts in <code>model.tsx</code> and <code>predictions.tsx</code>.</p>
 </div>
 
 <section>
-  <h2 class="sec">Reality check</h2>
-  <h3 class="owner">Sept 6 is a capture deadline, not a code deadline</h3>
+  <h2 class="sec">Where things stand</h2>
+  <h3 class="owner">Landed since Aug 21</h3>
+  <ul class="landed">
+    <li><span class="tick"></span><div><strong>All three branches were merged into <code>main</code> as of Aug 21.</strong> That is no longer true: Sarvad's Oct 4 commit is unmerged (see the Oct 4 list below). <code>ayaan/backend</code> is gone. The producer/consumer split between <code>ml/</code> and <code>frontend/</code> does not exist on <code>main</code>.</div></li>
+    <li><span class="tick"></span><div><strong>Model tab built.</strong> <code>frontend/app/model.tsx</code> went from an empty function to a 538-line page with a &ldquo;collecting data&rdquo; state, LSTM-vs-baseline bars, a predicted-vs-actual chart, data health rows, and a how-it-works blurb. It subscribes to <code>models/status</code> and <code>models/recent</code>. The crash is gone. Nothing writes those documents yet, so it shows &ldquo;collecting data&rdquo; until the ML side does (see Anish Jr).</div></li>
+    <li><span class="tick"></span><div><strong>Shared Firebase module.</strong> <code>frontend/lib/firebase.ts</code> initialises the app once at module scope and exports <code>app</code> and <code>db</code> (Firestore). The per-render <code>initializeApp</code> in the Parking screen is gone.</div></li>
+    <li><span class="tick"></span><div><strong>ML gap handling, cold-start guard, checkpoint metadata.</strong> <code>resample_occupancy</code> keeps outages as NaN and only forward-fills 15 minutes; <code>contiguous_blocks</code> / <code>window_starts</code> stop training windows straddling a gap; <code>check_window</code> raises on fewer than 48 rows; <code>torch.save</code> writes a dict with <code>num_spots</code>, <code>seq_len</code>, feature order and a timestamp, and <code>load_checkpoint</code> refuses mismatches.</div></li>
+    <li><span class="tick"></span><div><strong>Spot count is 2 in the ML.</strong> <code>NUM_SPOTS = 2</code> in <code>lstm.py</code>, everything derives from it, and the tests check <code>len(FEATURE_COLS) == INPUT_DIM</code>.</div></li>
+    <li><span class="tick"></span><div><strong>Seasonal baseline exists.</strong> <code>ml/baseline.py</code> has fit / predict / score. Oct 4: it now also has <code>baseline_forecast_week</code>, but nothing publishes it yet.</div></li>
+    <li><span class="tick"></span><div><strong>Tests can fail now.</strong> <code>ml/test_lstm.py</code> is real pytest, 5 tests, all pass, no bare <code>except</code>. <code>test_predictweek.py</code> is committed. <code>matplotlib</code> import dropped, <code>pytest</code> added to requirements. <code>tsc --noEmit</code> on the frontend is clean.</div></li>
+    <li><span class="tick"></span><div><strong>Forecast archiving is written.</strong> <code>predict_week.py</code> has a <code>publish_forecast</code> that writes <code>forecasts/latest</code> <em>and</em> <code>forecastRuns/{timestamp}</code>. Written, not running &mdash; see the first Anish Jr task.</div></li>
+    <li><span class="tick"></span><div><strong>Backend files committed (Ayaan, Sept 7).</strong> <code>backend/esp32readings.py</code> and <code>backend/mlmodeldata.py</code>: a host-side Python poller that hits the ESP32 over HTTP and uses the Firebase admin SDK. First code in <code>backend/</code> ever. Rough, but it settles the architecture question below.</div></li>
+  </ul>
+
+  <h3 class="owner" style="margin-top:36px">Landed or changed on Oct 4</h3>
+  <ul class="landed">
+    <li><span class="tick"></span><div><strong>Ayaan: <code>backend/mlmodel.py</code> on <code>main</code>.</strong> Reads <code>parkingLots/lot1/spots/A1/obervations</code> with the admin SDK and prints each document. It is a read-only sketch of ingest, not <code>ingest.py</code>: it does not build the <code>timestamp, spot_1, spot_2</code> table, covers one spot, and the key path only exists on his Windows machine.</div></li>
+    <li><span class="tick"></span><div><strong>Sarvad: <code>e3f299f</code> on <code>develop_sarvad</code>, not merged.</strong> New <code>components/ParkingLotLayout.tsx</code> (an SVG lot map) and <code>components/login.tsx</code>; <code>global.ts</code> moved to <code>components/styles/</code> (so it is no longer a fake route); the five-rectangle <code>&lt;Svg&gt;</code> and the 45pt &ldquo;false&rdquo; debug text are gone from <code>parking.tsx</code>. It also bumps Expo 54&rarr;57 and React Native 0.81&rarr;0.86, which nobody has run. Merging into <code>main</code> conflicts in <code>checklist.html</code>, <code>model.tsx</code> and <code>predictions.tsx</code>.</div></li>
+    <li><span class="tick"></span><div><strong>Anish Jr: ML pipeline fixes, local and uncommitted.</strong> <code>predict_week.py</code> now loads a window, forecasts and publishes (<code>--csv</code>, <code>--dry-run</code>; exits 0 with a message on insufficient data). <code>baseline_forecast_week</code> added and the <code>occupancy.csv</code> typo fixed. Python-3.12-only f-strings fixed, &ldquo;Model saved&rdquo; indented, <code>firebase-admin</code>/<code>requests</code> added to <code>ml/requirements.txt</code>, <code>test_predictweek.py</code> wrapped in a test function, new <code>test_baseline.py</code>. 8 tests pass; a dry run built 2,016 forecast points from a freshly retrained checkpoint. Nothing has been published to Firestore.</div></li>
+    <li><span class="tick"></span><div><strong>A third document schema exists now.</strong> Sarvad's <code>ParkingLotLayout.tsx</code> reads Firestore <code>parkingLots/lot1/spots/A1</code> and <code>A2/current/status</code> (<code>available</code>). Ayaan's poller writes <code>A1</code> only, so <code>A2</code> has no writer. Two of the three people are on <code>parkingLots/...</code>, which this checklist previously said to drop. See the schema task.</div></li>
+  </ul>
+
+  <h3 class="owner" style="margin-top:36px">What the backend files tell us about the architecture</h3>
   <div class="note" style="margin-top:14px">
-    Only one thing has to work by Sept 6: <strong>sensors writing data</strong>. Ingestion, ML and every UI fix can be built afterward against readings already banked. Missed readings are the sole unrecoverable failure on this page &mdash; you cannot backfill a sensor that wasn't running. Everything in <code>ml/</code> is trained on synthetic output from <code>gen_fake_data.py</code> until real data accumulates.
+    <p style="margin:0 0 9px">The ESP32 does <strong>not</strong> push to Firebase. It serves <code>GET http://192.168.1.42/distance</code> on the local network and returns a number in centimetres. A Python script on some other machine polls that URL, and that script holds a service-account key and writes to Firestore with the admin SDK. Four consequences, all of which change tasks from the last revision:</p>
+    <p style="margin:0 0 9px"><strong>1. The poller is now the capture single point of failure.</strong> It has to run 24/7 on a machine that is on the same WiFi as the sensor &mdash; a Raspberry Pi or an old laptop left at the temple &mdash; not on Ayaan's Windows laptop at home. If it stops, capture stops, and the ESP32 keeps happily serving a number nobody reads.</p>
+    <p style="margin:0 0 9px"><strong>2. Security rules get simpler.</strong> The admin SDK bypasses rules, so nothing needs public <em>write</em> any more. The &ldquo;known weakness&rdquo; from the last revision goes away: every collection can be read-only to clients.</p>
+    <p style="margin:0 0 9px"><strong>3. The occupancy threshold moves into the poller, not the firmware.</strong> The device returns centimetres; the poller decides occupied/free and stores booleans. Same idea, different file.</p>
+    <p style="margin:0"><strong>4. One endpoint means one sensor so far.</strong> There is no second IP or second path. Two spots need the ESP32 to return both distances in one response, or two devices.</p>
   </div>
-  <div class="note" style="margin-top:12px">
-    <strong>But validate early anyway.</strong> Get <code>ingest.py</code> reading real data within a few days of Sept 6, then leave it alone. The failure to avoid is discovering on Oct 1 that timestamps are wrong or spots are swapped, with five weeks of unusable rows behind you.
-  </div>
+
+  <h3 class="owner" style="margin-top:36px">The data clock, restarted</h3>
+  <div class="note" style="margin-top:14px">Whenever capture actually starts, the baseline needs about a week of readings and the LSTM about three. Count forward from that day, not from Sept 6. The right-hand column is the latest capture start that still leaves room for the thing in that row before Oct 15.</div>
   <div class="scroll" style="margin-top:16px">
     <table>
-      <thead><tr><th>When</th><th>Data on hand</th><th>Best available forecast</th></tr></thead>
+      <thead><tr><th>Milestone</th><th>Needs</th><th>If capture starts Sept 10</th><th>Latest start that still works</th></tr></thead>
       <tbody>
-        <tr><td class="when">Sept 6</td><td>capture begins</td><td>Live occupancy only. No forecast possible.</td></tr>
-        <tr><td class="when">~Sept 13</td><td>~2k rows &middot; 1 week</td><td>Seasonal baseline becomes viable</td></tr>
-        <tr><td class="when">~Sept 27</td><td>~6k rows &middot; 3 weeks</td><td>LSTM trainable; first honest comparison against the baseline</td></tr>
-        <tr><td class="when">Oct 15</td><td>~11k rows &middot; 5.5 weeks</td><td><strong>App due.</strong> Enough data to decide on evidence which model ships.</td></tr>
+        <tr><td>Baseline forecast viable</td><td>~1 week &middot; ~2k rows</td><td class="when">~Sept 17</td><td class="when">Oct 8</td></tr>
+        <tr><td>LSTM trainable, first honest comparison</td><td>~3 weeks &middot; ~6k rows</td><td class="when">~Oct 1</td><td class="when">Sept 24</td></tr>
+        <tr><td>Decide which model ships, on evidence</td><td>comparison + a few days</td><td class="when">~Oct 5</td><td class="when">Sept 24</td></tr>
+        <tr><td><strong>App due</strong></td><td>&mdash;</td><td class="when">Oct 15</td><td class="when">&mdash;</td></tr>
       </tbody>
     </table>
   </div>
+  <div class="note" style="margin-top:12px">If capture slips past Sept 24 the LSTM-vs-baseline comparison cannot happen before the deadline. That is not fatal &mdash; the baseline alone is a defensible launch forecast &mdash; but the Model tab's headline panel becomes &ldquo;we shipped the baseline because there wasn't time to test the alternative&rdquo; instead of a measured choice.</div>
+  <div class="note" style="margin-top:12px"><strong>Oct 4 check:</strong> 11 days to the deadline. The &ldquo;latest start that works&rdquo; for the LSTM comparison was Sept 24, so if the real capture began after that, an honest three-week LSTM-vs-baseline comparison is no longer possible. The decision is that the LSTM still ships. If the console shows under about 3 weeks (~6k rows), train it on what exists and have the Model tab say plainly that the comparison is on limited data. Moving the date is the owner's call and is not assumed here.</div>
 </section>
 
 <section>
   <h2 class="sec">Blocks everything &middot; do first</h2>
   <div class="ownerhead">
-    <h3 class="owner">Day one</h3>
+    <h3 class="owner">This week</h3>
     <span class="count" data-count="day1"></span>
   </div>
   <ul class="tasks" data-group="day1">
 
+    <li class="task crit" data-id="d1-verify">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Open the Firebase console and answer: is any history being stored, anywhere?</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag">Ayaan</span><span class="tag">Anish Jr</span><span class="tag date">Oct 4&ndash;5</span><span class="tag warn">Unverified</span></div>
+        <details><summary>What to look for</summary><div class="detail">
+          <p>Check both databases in project <code>parking-project-30a86</code>. In the Realtime Database, <code>/spots/spot1/distance</code> and <code>/spots/spot2/distance</code> are what the Parking screen reads today &mdash; note whether they are updating and whether anything else is under <code>/spots</code>. In Firestore, look for <code>occupancySnapshots</code>, <code>parkingLots/lot1/spots/A1/current/status</code> (what <code>mlmodeldata.py</code> writes), <code>current/state</code>, <code>forecasts</code>, <code>models</code>. Oct 4 additions: <code>parkingLots/lot1/spots/A1/obervations</code> (what Ayaan's <code>mlmodel.py</code> reads) and <code>.../A2/current/status</code> (what Sarvad's layout reads).</p>
+          <p>For each place there is data, record: row count, earliest and latest timestamp, whether both spots are covered, and whether the rows are real readings or connection-error records. Anish Jr needs console access and a service-account key of his own for this; the key path in Ayaan's file is on one Windows laptop.</p>
+          <p>Write the answer at the top of this file. If history exists somewhere, the ingest task changes shape. If it does not, the poller task below is the single most urgent thing in the project.</p>
+        </div></details>
+      </div></div>
+    </li>
+
     <li class="task crit" data-id="d1-rules">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Check the test-mode expiry date and publish real security rules</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag">Ayaan</span><span class="tag date">Today</span></div>
-        <details><summary>Rules to publish</summary><div class="detail">
-          <p>The ruleset in the old setup guide (&sect;4b) is <strong>wrong now</strong>. It said <code>allow read: if false</code>, which was correct when only the ML read the data &mdash; the admin SDK bypasses rules entirely, so it cost nothing. Now that the app reads live state and forecasts from Firestore as an ordinary client, those rules would break both screens.</p>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag">Ayaan</span><span class="tag date">Oct 4&ndash;5</span><span class="tag warn">Probably expired</span></div>
+        <details><summary>Rules to publish (simpler than last time)</summary><div class="detail">
+          <p>Carried over unresolved. Test mode is <code>allow read, write: if request.time &lt; timestamp.date(...)</code> and hard-fails on its expiry, about 30 days after creation. When it trips, every client read starts returning permission-denied and it looks exactly like a network bug.</p>
+          <p>Because the poller and the ML both write with the admin SDK, which ignores rules, <strong>nothing needs client write access</strong>. The public-write hole from the last revision is gone:</p>
 <pre><code>rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /occupancySnapshots/{doc} {
-      allow create: if true;
-      allow read, update, delete: if false;
-    }
-    match /current/state {
-      allow read: if true;
-      allow write: if true;
-    }
-    match /forecasts/latest {
-      allow read: if true;
-      allow write: if false;
-    }
+    match /current/state          { allow read: if true; allow write: if false; }
+    match /forecasts/{doc}        { allow read: if true; allow write: if false; }
+    match /models/{doc}           { allow read: if true; allow write: if false; }
+    match /forecastRuns/{doc}     { allow read: if true; allow write: if false; }
+    match /occupancySnapshots/{d} { allow read, write: if false; }
+    // Oct 4: only keep these if the parkingLots schema wins (see the schema task).
+    // Sarvad's lot map reads current/status from the client; obervations is ML-only.
+    match /parkingLots/{lot}/spots/{spot}/current/{doc} { allow read: if true; allow write: if false; }
   }
 }</code></pre>
-          <p>Known weakness, chosen deliberately: <code>current/state</code> needs public write because the device authenticates with only a public API key, so anyone could overwrite it. Acceptable for two sensors; the fix if it ever matters is Anonymous Auth or a device token.</p>
+          <p><code>occupancySnapshots</code> is read only by the ML through the admin SDK, so clients never need it. If the app later reads it (it shouldn't &mdash; it bills a read per document), open it then.</p>
+          <p>If the Parking screen stays on the Realtime Database for a while, its rules need the same treatment: <code>.read: true</code>, <code>.write: false</code> under <code>/spots</code>. The ESP32 is not writing there any more, so nothing needs write.</p>
         </div></details>
       </div></div>
     </li>
 
     <li class="task crit" data-id="d1-firmware">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Establish what firmware actually exists, and commit it as-is</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag">Sarvad</span><span class="tag date">Today</span></div>
-        <details><summary>Why this is urgent</summary><div class="detail">
-          <p>There is <strong>no firmware anywhere in this repo, on any branch, in the entire commit history</strong> &mdash; zero <code>.ino</code>, <code>.cpp</code>, or <code>platformio.ini</code> files have ever been committed. The app reads live sensor values, so something exists somewhere, but it is a single point of failure on one laptop and nobody else can verify it.</p>
-          <p>Commit it however rough. Everything downstream is blocked on it, and no real data can be collected until it runs.</p>
+        <div class="ttl">Commit the ESP32 sketch that serves <code>/distance</code>, as-is</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag">Sarvad</span><span class="tag date">Overdue</span></div>
+        <details><summary>Still nothing in <code>firmware/</code>, including on <code>develop_sarvad</code></summary><div class="detail">
+          <p>Still zero <code>.ino</code> / <code>.cpp</code> / <code>platformio.ini</code> files on any branch in the whole history. Only the empty <code>.gitkeep</code>. We now know what the sketch does &mdash; runs a web server and answers <code>GET /distance</code> with a number &mdash; because Ayaan's poller calls it. That is the entire device side of the project and it exists on one laptop.</p>
+          <p>Commit it however rough. WiFi credentials go in a <code>secrets.h</code> that is gitignored before the first commit, not after.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task high" data-id="d1-merge">
+    <li class="task high" data-id="d1-schema">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Merge all three branches into main</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag">Team</span><span class="tag date">Aug 21&ndash;28</span></div>
-        <details><summary>Why, and the one trap</summary><div class="detail">
-          <p>The three work streams have never been merged with each other. <code>ml/predict_week.py</code> writes to <code>frontend/assets/predictions.json</code>, but <code>ml/</code> and <code>frontend/</code> live on <strong>different unmerged branches</strong> &mdash; the producer can never reach the consumer in any single checkout. Nothing can be integration-tested until they coexist.</p>
-          <p>All three pairings merge clean today (verified with <code>git merge-tree</code> &mdash; no conflicts). Every day of delay adds drift.</p>
-          <p><strong>The trap:</strong> <code>develop_sarvad</code> forked before the <code>hardware/</code>&rarr;<code>firmware/</code> and <code>model/</code>&rarr;<code>ml/</code> renames. Rename detection resolves it correctly <em>today</em> only because those directories are empty. If anyone puts real files in <code>hardware/</code> before merging, that stops holding. <strong>Merge before writing firmware.</strong></p>
-          <p>Also: local <code>main</code> is 2 commits stale, so fetch first. And <code>ayaan/backend</code> has zero unique commits &mdash; safe to delete.</p>
+        <div class="ttl">Agree on one document schema and write it down in the repo</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag">Team</span><span class="tag date">Oct 5&ndash;6</span></div>
+        <details><summary>Five different shapes are in play right now</summary><div class="detail">
+          <p>Each person built against a different idea of the database:</p>
+          <p>&bull; <code>frontend/app/parking.tsx:24,34</code> reads Realtime DB <code>/spots/spotN/distance</code> (centimetres).<br>
+             &bull; <code>backend/mlmodeldata.py:33</code> writes Firestore <code>parkingLots/lot1/spots/A1/current/status</code> (<code>available</code>, <code>updatedAt</code>).<br>
+             &bull; <code>frontend/app/model.tsx:77,93</code> reads Firestore <code>models/status</code> and <code>models/recent</code>.<br>
+             &bull; <code>ml/predict_week.py:84-85</code> writes Firestore <code>forecasts/latest</code> and <code>forecastRuns/{ts}</code>.<br>
+             &bull; <code>ml/lstm.py</code> expects a table with columns <code>timestamp, spot_1, spot_2</code>.<br>
+             &bull; <strong>Oct 4:</strong> <code>frontend/components/ParkingLotLayout.tsx</code> (Sarvad) reads Firestore <code>parkingLots/lot1/spots/{A1,A2}/current/status</code>; <code>backend/mlmodel.py</code> (Ayaan) reads <code>parkingLots/lot1/spots/A1/obervations</code>.</p>
+          <p>None of these read what another one writes, except that Sarvad's screen and Ayaan's poller now both use <code>parkingLots/...</code>. Pick one set of paths, put it in a <code>SCHEMA.md</code> at the repo root, and make everyone code against it. Two ways to do it, and the choice depends on what the console check shows:</p>
+          <p><strong>A.</strong> <code>occupancySnapshots/{autoId}</code> for history (one doc per poll, all spots, booleans), <code>current/state</code> for the live screen. This is what the ML is built for (one row per moment, both spots) but it means Ayaan changes the poller <em>and</em> Sarvad changes the lot map.<br>
+             <strong>B.</strong> Keep <code>parkingLots/lot1/spots/{A1,A2}/current/status</code> for the live screen and add a history collection that holds <em>every</em> poll, both spots in one document. Less rework for the frontend, but the existing <code>obervations</code> collection cannot be that history as it stands: it is misspelled, per-spot, and only written on errors.</p>
+          <p>Either way: <code>forecasts/latest</code> + <code>forecastRuns/{ts}</code> for forecasts, <code>models/status</code> + <code>models/recent</code> for the Model tab, and one timestamp format (see the <code>models/status</code> task).</p>
+          <p>The old setup guide's &sect;3 is a starting point: <code>git show 31493b8:FIREBASE_SETUP_FOR_AYAAN.md</code>. Its &sect;4a (device REST writes) and &sect;4b (rules) are both obsolete now; &sect;6 (the admin-SDK export script) is still directly usable for <code>ingest.py</code>.</p>
         </div></details>
       </div></div>
     </li>
@@ -284,52 +347,104 @@ service cloud.firestore {
   <h2 class="sec">Owner</h2>
   <div class="ownerhead">
     <h3 class="owner">Ayaan</h3>
-    <span class="role">Data layer &mdash; blocks both other tracks</span>
+    <span class="role">Backend poller + data layer &mdash; capture depends on this</span>
     <span class="count" data-count="ayaan"></span>
   </div>
   <ul class="tasks" data-group="ayaan">
 
-    <li class="task high" data-id="ay-guide">
+    <li class="task crit" data-id="ay-poller-runs">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Restore the deleted Firebase guide as reference</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Aug 21&ndash;28</span></div>
-        <details><summary>How, and what to ignore in it</summary><div class="detail">
-          <p><code>git show 31493b8:FIREBASE_SETUP_FOR_AYAAN.md</code></p>
-          <p>It targets Firestore, so &sect;3 (schema) and &sect;6 (the export script) are <strong>directly usable</strong> &mdash; &sect;6 is a complete working implementation, not a sketch.</p>
-          <p><strong>Ignore &sect;4b</strong> &mdash; its security rules are wrong now (see the day-one task above). And extend &sect;3 with the <code>current/state</code> and <code>forecasts/latest</code> documents, which it predates.</p>
+        <div class="ttl">Make the poller actually connect the reading to the write</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 7&ndash;10</span></div>
+        <details><summary>What the two files do today</summary><div class="detail">
+          <p><code>backend/esp32readings.py</code> defines <code>main()</code> and never calls it &mdash; there is no <code>if __name__ == "__main__"</code> block, so running the file does nothing and exits. It is a subset of the other file anyway; delete it or turn it into the shared polling function.</p>
+          <p><code>backend/mlmodeldata.py</code> does call <code>main()</code>, but look at the order: the Firestore <code>.update({"available": False, ...})</code> at line 33 sits at <strong>module level</strong>, so it runs exactly once at import, before the loop starts, with a hardcoded <code>False</code>. The loop then polls forever and only <code>print</code>s. The distance reading never reaches the database. Also: <code>import time</code> twice (lines 5 and 8), <code>csv</code> imported and unused, and the comment says &ldquo;~5 readings/sec&rdquo; next to <code>time.sleep(60)</code>.</p>
+          <p>The fix is one file, one loop: read distance &rarr; threshold to a boolean &rarr; write both documents (next task) &rarr; sleep. 60 seconds is a fine interval; the ML resamples to 5-minute buckets anyway.</p>
+        </div></details>
+      </div></div>
+    </li>
+
+    <li class="task crit" data-id="ay-two-writes">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Two writes per poll: append history, overwrite live state</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 7&ndash;10</span></div>
+        <details><summary>Why two, and the shape</summary><div class="detail">
+          <p>Each poll: <code>db.collection("occupancySnapshots").add({...})</code> for the permanent history the ML trains on, and <code>db.document("current/state").set({...})</code> for the Parking screen. One overwritten document is one cheap read per client; subscribing to the history collection would bill a read per update and grow forever.</p>
+          <p><strong>One document per poll containing every spot</strong>, not one per sensor. <code>lstm.py</code> resamples into 5-minute buckets; if spots land in separate documents at slightly different times, buckets lose a value and become NaN, which the new gap logic then treats as an outage.</p>
+<pre><code>{"timestamp": SERVER_TIMESTAMP, "spot_1": True, "spot_2": False}</code></pre>
+          <p>Store booleans, decided in the poller: <code>occupied = distance_cm &lt; 30</code>. That literal currently lives five times in <code>parking.tsx:48-58</code>; it belongs here, once, as a named constant.</p>
+        </div></details>
+      </div></div>
+    </li>
+
+    <li class="task high" data-id="ay-keypath">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Take the Windows key path out, gitignore both key filenames first</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 7&ndash;10</span></div>
+        <details><summary>Order matters &mdash; now two files</summary><div class="detail">
+          <p>Oct 4: the new <code>backend/mlmodel.py:6</code> has its own hardcoded Windows key path, a different file from the one in <code>mlmodeldata.py</code>. Both need the same fix. On the ML side <code>predict_week.py</code> now reads <code>GOOGLE_APPLICATION_CREDENTIALS</code> first and falls back to <code>ml/serviceAccountKey.json</code>.</p>
+          <p><code>mlmodeldata.py:10</code> is <code>credentials.Certificate("C:/Users/aites/Downloads/privkey.json")</code>. That runs on exactly one machine. Read the path from an environment variable (<code>GOOGLE_APPLICATION_CREDENTIALS</code> is the convention; <code>firebase_admin.initialize_app()</code> with no arguments picks it up automatically).</p>
+          <p>Neither <code>privkey.json</code> nor <code>ml/serviceAccountKey.json</code> (the name <code>predict_week.py:77</code> expects) is in <code>.gitignore</code>. No key is in the repo today &mdash; keep it that way by adding both names <strong>before</strong> anyone copies a key into the tree. That key is full read/write to the whole database, unlike the client API key.</p>
+        </div></details>
+      </div></div>
+    </li>
+
+    <li class="task crit" data-id="ay-unattended">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Run the poller unattended on the temple network</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 10</span></div>
+        <details><summary>This is the new go-live</summary><div class="detail">
+          <p>The poller has to reach <code>192.168.1.42</code>, so it has to live on the same LAN as the sensor, on something that stays on: a Raspberry Pi, or an old laptop with the lid closed and sleep disabled. It needs to restart itself after a crash or a power cut (<code>systemd</code> service with <code>Restart=always</code> on Linux; Task Scheduler on Windows), log to a file, and survive the ESP32 being unreachable for an hour without dying &mdash; the <code>RequestException</code> handler already does that part.</p>
+          <p>Reserve the ESP32's IP in the router, or the next DHCP lease can move it and the poller will loop on connection errors forever.</p>
+          <p>Target Sept 10. Every day after that is a day off the data clock above. A gap in <code>occupancySnapshots</code> cannot be backfilled.</p>
         </div></details>
       </div></div>
     </li>
 
     <li class="task crit" data-id="ay-ingest">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Write <code>ml/ingest.py</code> &mdash; the piece three TODOs are blocked on</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
+        <div class="ttl">Write <code>ml/ingest.py</code> &mdash; still the piece the ML entry points are blocked on</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag">Anish Jr</span><span class="tag date">Oct 5&ndash;7</span><span class="tag warn">Blocked on data path</span></div>
         <details><summary>The two functions</summary><div class="detail">
-          <p>Blocks <code>ml/lstm.py:136</code> and <code>ml/predict_week.py:73</code>, both of which still read a synthetic CSV.</p>
-          <p><code>load_history()</code> &rarr; all of <code>occupancySnapshots</code> as a DataFrame with columns <code>timestamp,spot_1,spot_2</code> (the shape <code>lstm.py</code> already expects). Incremental &mdash; query <code>where timestamp &gt; last_seen</code>, don't re-download everything each run.</p>
-          <p><code>load_recent_window(hours=4.5)</code> &rarr; sliding-window input for <code>predict_week.py</code>. 4.5h rather than 4h on purpose: <code>SEQ_LEN=48</code> &times; 5min is exactly 4h, and the extra 30 minutes is slack so edge buckets don't get dropped.</p>
+          <p>Oct 4: Ayaan's <code>mlmodel.py</code> is a starting point for reading the data, not this file. Anish Jr owns it now, and it is blocked on the console check and the schema decision above, because the query and the spot-merging depend on which path holds the history. If it ends up being one document per spot (the <code>obervations</code> shape), <code>ingest.py</code> has to merge spots into the same 5-minute bucket itself.</p>
+          <p>Carried over; still does not exist. <code>lstm.py:183</code> still reads the synthetic CSV, and <code>predict_week.py</code> has no data source at all.</p>
+          <p><code>load_history()</code> &rarr; all of <code>occupancySnapshots</code> as a DataFrame with columns <code>timestamp, spot_1, spot_2</code>. Incremental: query <code>where timestamp &gt; last_seen</code> and append to a local parquet/CSV cache rather than re-downloading each run.</p>
+          <p><code>load_recent_window(hours=4.5)</code> &rarr; sliding-window input for <code>predict_week.py</code>. 4.5h on purpose: <code>SEQ_LEN=48</code> &times; 5 min is exactly 4h, and the extra 30 minutes is slack so edge buckets don't get dropped.</p>
+          <p>&sect;6 of the old guide is a working version of the first function.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task" data-id="ay-deps">
+    <li class="task high" data-id="ay-obs-path">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Add <code>firebase-admin</code> to requirements, and gitignore the service key <em>first</em></div>
-        <div class="tags"><span class="tag date">Aug 29&ndash;Sept 5</span></div>
-        <details><summary>Order matters</summary><div class="detail">
-          <p>Add <code>ml/serviceAccountKey.json</code> to <code>.gitignore</code> <strong>before</strong> downloading the key, not after. That key grants full read/write to the entire database, unlike the device's public API key.</p>
+        <div class="ttl">Say what <code>obervations</code> is, and give spot A2 a writer</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Oct 4&ndash;5</span><span class="tag warn">New</span></div>
+        <details><summary>Three problems in the path Ayaan pointed Anish Jr at</summary><div class="detail">
+          <p><strong>It is misspelled</strong> (<code>obervations</code>) in both <code>mlmodeldata.py</code> and <code>mlmodel.py</code>. Fixing the spelling in one place orphans whatever is already stored, so decide before changing it.</p>
+          <p><strong>It is only written on errors.</strong> In <code>mlmodeldata.py</code> the <code>.add()</code> into <code>obervations</code> is inside <code>except requests.exceptions.RequestException</code>, and it writes <code>availability</code>, which is unassigned if the very first poll fails. A successful poll updates <code>current/status</code> and appends nothing. If that is still how the running poller behaves, the history is a list of outages.</p>
+          <p><strong>There is no A2.</strong> The poller hits one URL and writes <code>A1</code>. Sarvad's lot map subscribes to <code>A2/current/status</code>, so spot 2 can never update. This is the same problem as the firmware task (one endpoint, one sensor).</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task" data-id="ay-cron">
+    <li class="task" data-id="ay-reqs">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Set up both cron jobs &mdash; hourly forecast, weekly retrain</div>
-        <div class="tags"><span class="tag date">Sept 6&ndash;13</span></div>
+        <div class="ttl">Add <code>firebase-admin</code> and <code>requests</code> to requirements</div>
+        <div class="tags"><span class="tag date">Sept 7&ndash;10</span><span class="tag ok">Done locally, uncommitted</span></div>
+        <details><summary>ML side done, backend side not</summary><div class="detail">
+          <p>Oct 4: <code>ml/requirements.txt</code> now lists <code>firebase-admin</code> (unpinned, since it is not installed here to read a version from) and <code>requests==2.34.2</code>. <code>backend/</code> still has no requirements file; either point it at the ML one or add one, and install <code>firebase-admin</code> into the venv.</p>
+          <p>Original note: <code>predict_week.py:70</code> imports <code>firebase_admin</code>; both backend files import <code>requests</code>. <code>ml/requirements.txt</code> had neither, and <code>firebase_admin</code> is not installed in the project venv.</p>
+        </div></details>
+      </div></div>
+    </li>
+
+    <li class="task high" data-id="ay-cron">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Set up both scheduled jobs &mdash; hourly forecast, weekly retrain &mdash; on the same always-on box</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 17&ndash;24</span></div>
         <details><summary>Requirements</summary><div class="detail">
-          <p>The TODOs are at <code>ml/lstm.py:11</code> and <code>ml/predict_week.py:75</code>.</p>
-          <p>Needs a real host with logging and failure alerting, not a laptop crontab &mdash; it has to keep running unattended from Sept 6. Both jobs must <strong>no-op safely on insufficient data</strong> rather than crashing or writing garbage, since for the first week there won't be enough history.</p>
+          <p>The TODO is still at <code>ml/lstm.py:11</code>; the one in <code>predict_week.py</code> was removed on Oct 4 now that the entry point does real work (it still has no scheduler). The machine running the poller is the natural host, since it already has the service key and stays on.</p>
+          <p>Both jobs must exit cleanly with a logged message on insufficient data rather than crash or write garbage &mdash; <code>check_window</code> now raises <code>ValueError</code> for that case, so the job wrapper just has to catch it. Needs logging and some failure alerting (even a Discord webhook on non-zero exit). The Model tab's &ldquo;no reading for N min&rdquo; banner is the other half of the alerting, once <code>models/status</code> is being written.</p>
         </div></details>
       </div></div>
     </li>
@@ -341,82 +456,44 @@ service cloud.firestore {
   <h2 class="sec">Owner</h2>
   <div class="ownerhead">
     <h3 class="owner">Sarvad</h3>
-    <span class="role">Firmware (critical path) + UI</span>
+    <span class="role">Firmware + Parking screen + UI cleanup</span>
     <span class="count" data-count="sarvad"></span>
   </div>
   <ul class="tasks" data-group="sarvad">
 
-    <li class="task crit" data-id="sv-firestore">
+    <li class="task high" data-id="sv-firmware-hard">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Repoint firmware at Firestore &mdash; two writes per poll</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Aug 22&ndash;28</span></div>
-        <details><summary>What to write where</summary><div class="detail">
-          <p>It currently targets Realtime Database. Guide &sect;4a has the REST call &mdash; POST to <code>.../documents/occupancySnapshots?key=&lt;API_KEY&gt;</code> with typed values (<code>booleanValue</code>, <code>timestampValue</code>).</p>
-          <p>Each poll writes <strong>twice</strong>: append one document to <code>occupancySnapshots</code> (the permanent history the ML trains on), and overwrite <code>current/state</code> (a single cheap document the live parking screen reads).</p>
-          <p>Why two: a live subscription over the history collection bills a read per update per client and grows without bound. A single overwritten document is one cheap read against the 50k/day free tier.</p>
-          <p><strong>One document per poll containing every spot</strong> &mdash; not one document per sensor. The ML resamples into 5-minute buckets, and if spots land in separate documents at slightly different times, buckets lose a value and get silently dropped.</p>
+        <div class="ttl">Make the sketch serve both sensors and survive unattended</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 7&ndash;14</span></div>
+        <details><summary>What it needs</summary><div class="detail">
+          <p>The poller reads one number from one path. Return both in one response &mdash; <code>{"spot_1": 12.3, "spot_2": 141.0}</code> as JSON on <code>/distance</code> &mdash; so one poll captures one moment for both spots, which is what the ML's bucketing wants.</p>
+          <p>WiFi reconnect on drop, a watchdog reset if the loop hangs, and no hardcoded credentials in committed source. Print the IP on boot so whoever sets up the poller can find it. The device no longer needs to know anything about Firebase.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task high" data-id="sv-threshold">
+    <li class="task high" data-id="sv-parking-fs">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Move the occupancy threshold into firmware, store booleans</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Aug 22&ndash;28</span></div>
-        <details><summary>Where it lives today</summary><div class="detail">
-          <p>The <code>distance &lt; 30</code> decision currently lives in a React component &mdash; <code>frontend/app/parking.tsx:48</code>, with the literal <code>30</code> repeated five times. The ML would otherwise have to re-derive a UI constant to know what &ldquo;occupied&rdquo; means.</p>
-          <p>Decide once on the device, write <code>true</code>/<code>false</code>. Use NTP-synced timestamps while you're there.</p>
+        <div class="ttl">Move <code>parking.tsx</code> to Firestore <code>current/state</code> and cut it to 2 real spots</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Oct 5&ndash;10</span><span class="tag warn">Partly changed Oct 4</span></div>
+        <details><summary>Fake spots fixed; the database is now a mix of three sources</summary><div class="detail">
+          <p><strong>Oct 4 (<code>e3f299f</code>):</strong> the five-rectangle SVG is gone, replaced by <code>ParkingLotLayout</code>, which listens to Firestore <code>parkingLots/lot1/spots/A1</code> and <code>A2/current/status</code>. But <code>parking.tsx</code> still has two live <code>onValue</code> listeners on the Realtime Database (<code>distance1</code>, <code>distance2</code>) whose values are never used, and <code>ParkingLotLayout</code> imports <code>../app/parking</code> (unused, and circular). The Home tab still describes live readings. Which database is the source of truth is the schema task; until that is settled this screen should not move again.</p>
+          <p><strong>Original note:</strong> lines 5, 23-27 and 33-37 still use <code>firebase/database</code> and <code>onValue</code> on <code>/spots/spotN/distance</code>, and lines 48-58 still threshold centimetres client-side. Once the poller writes booleans to <code>current/state</code>, this becomes one <code>onSnapshot(doc(db, "current", "state"))</code> using the <code>db</code> already exported from <code>lib/firebase.ts</code>. Wait for the poller to be writing before switching, or the screen goes blank.</p>
+          <p><strong>Fake spots:</strong> <em>fixed on Oct 4 in the unmerged branch.</em> The old five rectangles are gone. Check how many spots <code>ParkingLotLayout</code> actually draws against the two real sensors.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task crit" data-id="sv-reliable">
-      <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Make firmware survive unattended &mdash; deployed and writing by Sept 1</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 1</span></div>
-        <details><summary>What it needs, and why the date is early</summary><div class="detail">
-          <p>WiFi reconnect, retry-on-failure, no hardcoded credentials in committed source.</p>
-          <p>Target Sept 1 rather than Sept 6 so there are about five days of real data before go-live &mdash; enough to catch the failures that only show up overnight.</p>
-          <p>A gap in <code>occupancySnapshots</code> is <strong>unrecoverable</strong>. You cannot backfill a sensor that wasn't running.</p>
-        </div></details>
-      </div></div>
-    </li>
-
-    <li class="task high" data-id="sv-model">
-      <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Stop the Model tab crashing &mdash; stub it until the real page is built</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
-        <details><summary>The bug</summary><div class="detail">
-          <p><code>frontend/app/model.tsx</code> is, in its entirety:</p>
-<pre><code>export default function Model() {
-
-}</code></pre>
-          <p>It returns <code>undefined</code>, and it is a <strong>live registered tab</strong> (<code>_layout.tsx:38-46</code>, titled &ldquo;Model&rdquo;). React throws the moment anyone taps it. This passes <code>tsc</code> cleanly &mdash; it is a runtime error, not a compile error, so no type check will catch it.</p>
-          <p>Cheapest fix is returning a placeholder view or unregistering the tab. The real page is a separate task owned by Anish Jr &mdash; this item is only about not crashing in the meantime.</p>
-        </div></details>
-      </div></div>
-    </li>
-
-    <li class="task high" data-id="sv-parking">
-      <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Move <code>parking.tsx</code> to Firestore and cut it to 2 real spots</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 13&ndash;27</span></div>
-        <details><summary>Two separate problems</summary><div class="detail">
-          <p><strong>Database:</strong> swap <code>firebase/database</code> / <code>onValue</code> for <code>firebase/firestore</code> / <code>onSnapshot</code> on <code>current/state</code>, and read booleans instead of thresholding centimetres client-side.</p>
-          <p><strong>Fake spots:</strong> the screen draws 5 rectangles but subscribes to only 2 sensors. Lines 54, 56 and 58 all re-render <code>distance1</code> &mdash; spots 3, 4 and 5 are copies of spot 1. With 2 real sensors going live, cut it to 2.</p>
-        </div></details>
-      </div></div>
-    </li>
-
-    <li class="task" data-id="sv-cleanup">
+    <li class="task" data-id="sv-debug">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Clear the leftover debug UI</div>
-        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
-        <details><summary>Four items</summary><div class="detail">
-          <p><code>parking.tsx:46</code> renders <code>{propertiesShown.toString()}</code> &mdash; the literal text &ldquo;false&rdquo; at 45pt, on screen. It is also a React Native <code>&lt;Text&gt;</code> nested directly inside <code>&lt;Svg&gt;</code>, which isn't a valid SVG child.</p>
-          <p><code>parking.tsx:65</code> &mdash; the spot-detail modal body is the word <code>hello</code>.</p>
-          <p><code>settings.tsx:8</code> declares <code>isDark</code> state and imports <code>Switch</code>, then renders neither. Either wire dark mode or drop them.</p>
-          <p><code>parking.tsx:20</code> calls <code>initializeApp()</code> inside the component body, so it re-runs on every render. Move it to module scope.</p>
+        <div class="tags"><span class="tag date">Sept 24&ndash;Oct 8</span><span class="tag warn">Two of three left</span></div>
+        <details><summary>Two items left on <code>develop_sarvad</code> (the &ldquo;false&rdquo; text is fixed there)</summary><div class="detail">
+          <p><s><code>parking.tsx</code> rendered <code>{propertiesShown.toString()}</code> inside an <code>&lt;Svg&gt;</code>.</s> Gone in <code>e3f299f</code>.</p>
+          <p><code>parking.tsx</code> &mdash; the spot-detail modal body is still the word <code>hello</code>. Nothing sets <code>propertiesShown</code> to true any more now that the old tappable rectangle is gone, so the modal is also unreachable. Either wire it to the lot map or delete it.</p>
+          <p><code>settings.tsx:1,8</code> still imports <code>Switch</code> and declares <code>isDark</code>, renders neither. Untouched in <code>e3f299f</code>.</p>
+          <p>New: <code>components/login.tsx</code> declares a component that has no <code>return</code> (the JSX is a bare statement), so it renders nothing. Not routed yet, so nothing breaks, but it will when something imports it.</p>
+          <p>Fixed since last time: the per-render <code>initializeApp</code> is gone (moved to <code>lib/firebase.ts</code>).</p>
         </div></details>
       </div></div>
     </li>
@@ -424,10 +501,21 @@ service cloud.firestore {
     <li class="task" data-id="sv-misc">
       <div class="row"><input type="checkbox"><div class="body">
         <div class="ttl">Move <code>styles/global.ts</code> out of <code>app/</code>, and fix the root README</div>
-        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
-        <details><summary>Both are small</summary><div class="detail">
-          <p>Expo Router treats <strong>every</strong> file under <code>app/</code> as a route, and <code>global.ts</code> has no default export &mdash; it shows up in the generated router types as a real route. Move it to <code>frontend/styles/</code>.</p>
-          <p>The root <code>README.md</code> says the project is &ldquo;AI powered street parking availability detection using <strong>computer vision</strong>&rdquo;. There is no computer vision here &mdash; it's ultrasonic HC-SR04 sensors and an LSTM. It has never been updated since the first commit.</p>
+        <div class="tags"><span class="tag date">Sept 24&ndash;Oct 8</span></div>
+        <details><summary>One done, one still open</summary><div class="detail">
+          <p><strong>Done differently on Oct 4:</strong> <code>global.ts</code> moved to <code>frontend/components/styles/</code>, outside <code>app/</code>, so it is no longer a route. Every importer was updated in <code>e3f299f</code>. The catch is that it is not on <code>main</code> yet, so <code>model.tsx</code> and <code>predictions.tsx</code> on <code>main</code> still import <code>./styles/global</code> and conflict on merge.</p>
+          <p>The root <code>README.md</code> still says &ldquo;AI powered street parking availability detection using <strong>computer vision</strong>&rdquo;. It is ultrasonic sensors, a Python poller, and an LSTM, and the app's own Home screen already describes that correctly.</p>
+        </div></details>
+      </div></div>
+    </li>
+
+    <li class="task" data-id="sv-apikey">
+      <div class="row"><input type="checkbox"><div class="body">
+        <div class="ttl">Decide what to do about the committed client API key</div>
+        <div class="tags"><span class="tag date">Sept 24&ndash;Oct 8</span></div>
+        <details><summary>Downgraded from the last revision, with a correction</summary><div class="detail">
+          <p>The key is now at <code>lib/firebase.ts:15</code>. The comment there says the odd leading <code>Y</code> was checked against the REST API and it authenticates fine, so the &ldquo;malformed&rdquo; claim in the last revision was wrong.</p>
+          <p>Firebase web API keys are designed to ship inside client apps; they identify the project, they don't grant access. What limits damage is the security rules, which is why the rules task is critical and this one is not. Rotating it is still reasonable hygiene because the repo is public and the rules were open for a while, and it costs five minutes in the console. Do it after the rules are published, and don't commit the replacement.</p>
         </div></details>
       </div></div>
     </li>
@@ -439,187 +527,170 @@ service cloud.firestore {
   <h2 class="sec">Owner</h2>
   <div class="ownerhead">
     <h3 class="owner">Anish Jr</h3>
-    <span class="role">ML pipeline + forecast screen</span>
+    <span class="role">ML pipeline + forecast screen + feeding the Model tab</span>
     <span class="count" data-count="anishjr"></span>
   </div>
   <ul class="tasks" data-group="anishjr">
 
-    <li class="task high" data-id="aj-spots">
+    <li class="task crit" data-id="aj-wire-main">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Change spot count from 5 to 2 and retrain</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 6&ndash;13</span></div>
-        <details><summary>Where 5 is hardcoded</summary><div class="detail">
-          <p>The number 5 appears in <strong>8+ independent places</strong> with no shared source of truth: <code>ml/lstm.py:27</code>, <code>ml/gen_fake_data.py:24</code>, <code>frontend/app/predictions.tsx:8</code>, and <code>predictions.tsx:129</code> as a bare literal in JSX (<code>{open} / 5 open</code>).</p>
-          <p>Worst offender: <code>ml/test_lstm.py:50</code> hardcodes <code>ParkingLSTM(input_dim=11, hidden_dim=64, num_layers=2, num_spots=5)</code> as bare literals, bypassing the constants entirely. Changing <code>NUM_SPOTS</code> silently breaks it. Make everything derive from one value per side.</p>
+        <div class="ttl"><code>predict_week.py</code> never runs a forecast &mdash; wire the entry point</div>
+        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 10&ndash;17</span><span class="tag ok">Wired Oct 4, uncommitted</span><span class="tag warn">Not run for real</span></div>
+        <details><summary>Wired and dry-run on synthetic data; real source and real publish remain</summary><div class="detail">
+          <p><strong>Oct 4:</strong> <code>__main__</code> now builds a window, calls <code>forecast_week</code> and <code>publish_forecast</code>. <code>--csv &lt;file&gt;</code> reads a window from a CSV, <code>--dry-run</code> skips the Firestore write, and not enough data prints a message and exits 0. The checkpoint was retrained locally. A dry run on <code>occupancy_data.csv</code> built 2,016 points. <strong>Still to do:</strong> <code>ingest.load_recent_window()</code> as the default source (until then, running with no arguments exits with a message), and one real publish to confirm the document lands in <code>forecasts/latest</code>.</p>
+          <p>Original note: lines 64-89: load the checkpoint, print its metadata, <em>define</em> <code>_db()</code> and <code>publish_forecast()</code>, hit a TODO comment, exit. Nothing calls <code>forecast_week</code>, nothing calls <code>publish_forecast</code>, nothing loads a window. Run it and it prints two lines and returns 0.</p>
+          <p>The body needs to be: <code>window = ingest.load_recent_window()</code> &rarr; <code>forecast = forecast_week(model, window, device)</code> &rarr; <code>publish_forecast(forecast)</code>. Until <code>ingest.py</code> exists, accept a CSV path as an argument so the pipeline can be tested end to end on the synthetic data.</p>
+          <p>Also: the checkpoint on disk, <code>ml/parking_lstm.pth</code>, is dated Aug 2 and predates the metadata format, so <code>load_checkpoint</code> will raise &ldquo;old checkpoint with no metadata&rdquo; before any of that runs. Retrain once with the current <code>lstm.py</code> (it is gitignored, so everyone has to do this locally).</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task high" data-id="aj-baseline">
+    <li class="task high" data-id="aj-status-doc">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Build the seasonal baseline &mdash; it is the launch forecast, not the LSTM</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 13&ndash;27</span></div>
-        <details><summary>The measurements behind this</summary><div class="detail">
-          <p>An hour &times; weekday occupancy table (48 numbers per spot) beat the LSTM rollout on every metric on the current data: BCE 0.3255 vs 0.3376, Brier 0.1079 vs 0.1125, accuracy 0.8351 vs 0.8286.</p>
-          <p><strong>Important caveat:</strong> that was measured on synthetic data whose generator <em>is</em> an hour-lookup table, so it is rigged in the baseline's favour. It does <strong>not</strong> prove the LSTM is useless on real data.</p>
-          <p>What it does establish: the baseline is trivial to build, needs about one week of data instead of three, and the LSTM has to be measured against it before it earns the slot. Separately measured &mdash; the LSTM's input window stops influencing the forecast after about an hour (identical output from all-empty vs all-full starting states by step 12), so its value is short-horizon, not week-ahead.</p>
+        <div class="ttl">Write <code>models/status</code> and <code>models/recent</code> &mdash; the Model tab is built and waiting</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 17&ndash;24</span></div>
+        <details><summary>The contract the tab already expects, and one crash to avoid</summary><div class="detail">
+          <p><code>model.tsx:190-197</code> reads <code>status.serving</code> (<code>"lstm"</code> | <code>"baseline"</code>), <code>status.lstm.accuracy</code>, <code>status.baseline.accuracy</code>, <code>status.trainedAt</code>, <code>status.lastForecastRun</code>, and <code>status.data.{rows, days, gaps, lastReading}</code>. <code>models/recent</code> is <code>{spots: [...], points: [{act: [0,1], pred: [0.2, 0.8]}, ...]}</code>, one point per hour for the chart. The training job writes the first, the forecast job updates <code>lastForecastRun</code>, and something (the retrain is fine) computes <code>recent</code> by joining <code>forecastRuns</code> against <code>occupancySnapshots</code>.</p>
+          <p><strong>Timestamp format trap.</strong> <code>model.tsx:41</code> parses dates by splitting on a space: <code>"YYYY-MM-DD HH:MM"</code>. Both <code>lstm.py:226</code> and <code>predict_week.py:81</code> produce <code>datetime.isoformat()</code>, which uses a <code>T</code>. Feed one of those into <code>trainedAt</code> or <code>lastForecastRun</code> and <code>toDate</code> does <code>undefined.split(":")</code> and the tab crashes on open. Either write <code>strftime("%Y-%m-%d %H:%M")</code> on the Python side or make <code>toDate</code> accept both. Pick one and put it in <code>SCHEMA.md</code>.</p>
+          <p>Do not count <code>occupancySnapshots</code> documents from the app to get row counts; that bills a read per document. Count on the ML side and write the number.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task high" data-id="aj-output">
+    <li class="task high" data-id="aj-baseline-live">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Write forecasts to <code>forecasts/latest</code> instead of a bundled JSON file</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 13&ndash;27</span></div>
-        <details><summary>Why the current path can never work</summary><div class="detail">
-          <p><code>predictions.tsx:6</code> does <code>require("../assets/predictions.json")</code> &mdash; a <strong>build-time</strong> import. Expo bundles assets when the app is built, so a JSON file written by a cron job on a server will never reach anyone's phone. Updating the forecast today would require rebuilding and redeploying the app.</p>
-          <p>Replace the write at <code>predict_week.py:77</code> with a Firestore write, and the <code>require()</code> with an <code>onSnapshot</code>. This deletes the broken cross-branch file seam entirely.</p>
+        <div class="ttl">Give the baseline a forecast-week and publish path &mdash; it is the launch forecast</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 17&ndash;24</span><span class="tag ok">Function added Oct 4, uncommitted</span><span class="tag warn">Not publishable yet</span></div>
+        <details><summary>Forecast function and CSV fix done; no entry point publishes it</summary><div class="detail">
+          <p><strong>Oct 4:</strong> <code>baseline_forecast_week(df)</code> returns the same row shape as <code>forecast_week</code> (<code>timestamp</code> as <code>str(ts)</code>, then <code>spot_1</code>, <code>spot_2</code>), covered by two new tests, and the <code>occupancy.csv</code> typo is fixed. <strong>Still missing:</strong> something that calls it and then <code>publish_forecast(forecast, model_name="baseline")</code>, plus the same ingest source. This is the forecast that ships if the LSTM does not beat it.</p>
+          <p>Original note: <code>baseline.py</code> had <code>fit_baseline</code>, <code>baseline_predict</code> and <code>score</code>. It had no function that produces the same <code>[{timestamp, spot_1, spot_2}, ...]</code> list <code>forecast_week</code> returns, so it cannot be published to <code>forecasts/latest</code>. Add one; <code>publish_forecast(forecast, model_name="baseline")</code> already takes the name.</p>
+          <p>Its <code>__main__</code> block (line 43) reads <code>occupancy.csv</code>; the file is <code>occupancy_data.csv</code>. It crashes when run directly. One-word fix.</p>
+          <p>Why this is the launch forecast: it needs one week of data, the LSTM needs three, and on the synthetic data the baseline won on every metric (BCE 0.3255 vs 0.3376, Brier 0.1079 vs 0.1125, accuracy 0.835 vs 0.829). That comparison was rigged in the baseline's favour because the generator is itself an hour-lookup table, so it proves nothing about real data &mdash; but it does mean the LSTM has to beat it to earn the slot.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task crit" data-id="aj-coldstart">
+    <li class="task high" data-id="aj-forecast-screen">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Add cold-start guards &mdash; fail loudly on insufficient data</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
-        <details><summary>The silent-garbage bug</summary><div class="detail">
-          <p><code>features[-SEQ_LEN:]</code> returns <em>fewer</em> rows when fewer exist, and <code>nn.LSTM</code> accepts variable-length input without complaint. Verified: passing 3 timesteps where 48 were expected returns a clean <code>[1, 5]</code> output with no exception raised.</p>
-          <p>So during the first hours after go-live, both entry points will quietly produce confident predictions from almost no data. Assert on window length instead.</p>
+        <div class="ttl">Forecast screen: subscribe to <code>forecasts/latest</code>, 2 spots, collecting-data state</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag date">Oct 10&ndash;13</span><span class="tag warn">Merge conflict coming</span></div>
+        <details><summary>Unchanged since last time, and the fake forecast is now live</summary><div class="detail">
+          <p><strong>Oct 4:</strong> the bundled <code>predictions.json</code> is still dated Sept 9&ndash;16, so the &ldquo;outside the forecast week&rdquo; notice stopped firing weeks ago. Sarvad's branch changed only this file's <code>global</code> import path, and that one-line difference is the merge conflict. Resolve it once when his branch lands, in the same change that replaces the <code>require</code>.</p>
+          <p><code>predictions.tsx:6</code> still does <code>require("../assets/predictions.json")</code>, a build-time import that a server-side job can never update. <code>SPOTS</code> at line 8 is still five entries and line 182 still renders the bare literal <code>{open} / 5 open</code>.</p>
+          <p>The bundled file is the same stale one: 2,016 rows, exactly one unique value tuple, five spots, dated <strong>Sept 9&ndash;16</strong>. Until now the &ldquo;outside the forecast week&rdquo; notice flagged it. <strong>From Sept 9 that notice stops firing</strong> and the screen shows a confident, flat, fake forecast for five spots that looks like a real one. Only the &ldquo;same numbers every row&rdquo; banner at line 189 will still be honest.</p>
+          <p>Replace the <code>require</code> with an <code>onSnapshot</code>, cut to 2 spots, add a &ldquo;collecting data&rdquo; state modelled on the one in <code>model.tsx:129-188</code>, and keep the flat-data check. Then delete <code>frontend/assets/predictions.json</code>.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task crit" data-id="aj-gaps">
+    <li class="task" data-id="aj-retrain-real">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Handle sensor outages &mdash; resampling silently splices across gaps</div>
-        <div class="tags"><span class="tag crit">Critical</span><span class="tag date">Sept 6&ndash;13</span></div>
-        <details><summary>Verified behaviour</summary><div class="detail">
-          <p><code>resample_occupancy</code> at <code>ml/lstm.py:45</code> does <code>.resample().mean().dropna()</code>. Fed a 6-hour outage, the output contains two rows <strong>365 minutes apart sitting adjacent</strong> &mdash; and the model reads them as one 5-minute step.</p>
-          <p>Real hardware will have outages. Reindex onto a full time grid, forward-fill short gaps, and refuse to build training windows that span long ones. <code>OccupancyDataset.__getitem__</code> (<code>lstm.py:66</code>) inherits the same bug &mdash; it slices <code>idx : idx+seq_len</code> with no contiguity check.</p>
+        <div class="ttl">First retrain on real data, then compare against the baseline on evidence</div>
+        <div class="tags"><span class="tag date">Oct 7&ndash;10</span><span class="tag warn">LSTM must ship</span></div>
+        <details><summary>Depends on the data clock, and the data check</summary><div class="detail">
+          <p><strong>Oct 4:</strong> the plan is that the LSTM ships regardless. If there are fewer than about three weeks of real rows, train on what exists and write the row/day counts into <code>models/status.data</code> so the Model tab shows the comparison is on limited data. The baseline still gets scored on the same held-out days, and the LSTM only takes <code>serving</code> if it wins; otherwise the tab should say why the LSTM was shipped alongside it.</p>
+          <p>Three weeks after capture starts. Point <code>lstm.py:183</code> at <code>ingest.load_history()</code>, train, and score both models on the same held-out days with <code>baseline.score</code>. Write both accuracies and the <code>serving</code> decision into <code>models/status</code>. That single document is what makes the Model tab's headline panel true.</p>
+          <p>Log the metrics from every weekly retrain (a <code>trainingRuns/{ts}</code> document is enough). That is the &ldquo;accuracy as data accumulated&rdquo; chart for free.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task high" data-id="aj-predui">
+    <li class="task" data-id="aj-small">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Update the forecast screen: live data, 2 spots, and a collecting-data state</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 27&ndash;Oct 10</span></div>
-        <details><summary>Four changes</summary><div class="detail">
-          <p>Subscribe to <code>forecasts/latest</code> instead of <code>require()</code>. Cut <code>SPOTS</code> (<code>predictions.tsx:8</code>) to 2. Fix the bare literal in <code>{open} / 5 open</code> at <code>:129</code>. Add the &ldquo;collecting data&rdquo; state for the first week when no forecast exists.</p>
-          <p>Keep the existing guards &mdash; the flat-data check at <code>:81-87</code> and its banner at <code>:138</code>, plus the out-of-week notice. That self-diagnosis is good code and it is currently the only thing telling you the shipped data is broken.</p>
+        <div class="ttl">Small things noticed while reading</div>
+        <div class="tags"><span class="tag date">whenever</span><span class="tag ok">3 of 4 done Oct 4, uncommitted</span></div>
+        <details><summary>Four, one left (<code>gen_fake_data.py</code>)</summary><div class="detail">
+          <p><s><code>lstm.py:228</code> &mdash; <code>print("\nModel saved")</code> is dedented</s> Fixed Oct 4; the f-string quotes and the test wrapper below are fixed too. Original notes:</p>
+          <p><code>lstm.py:228</code> &mdash; <code>print("\nModel saved")</code> is dedented out of the <code>if __name__</code> block, so it prints on every import, including during tests.</p>
+          <p><code>lstm.py:46,49</code> and <code>predict_week.py:68</code> nest double quotes inside double-quoted f-strings (<code>f"...{ck["num_spots"]}..."</code>). That is legal only on Python 3.12+. The venv is 3.14 so it works here; Ayaan's Windows box running the cron jobs may not be. Swap to single quotes inside and it works everywhere.</p>
+          <p><code>gen_fake_data.py</code> still generates five spots. Harmless because <code>FEATURE_COLS</code> only picks <code>spot_1</code> and <code>spot_2</code>, but it is the last place 5 lives on the ML side.</p>
+          <p><code>test_predictweek.py</code> is module-level asserts, not test functions, so pytest runs it at collection time and reports zero tests from it. Works, but a failure shows as a collection error rather than a named test. Wrap it in <code>def test_window_slides()</code> when convenient.</p>
         </div></details>
       </div></div>
     </li>
 
-    <li class="task" data-id="aj-json">
+  </ul>
+</section>
+
+<section>
+  <h2 class="sec">Team</h2>
+  <div class="ownerhead">
+    <h3 class="owner">Shared</h3>
+    <span class="count" data-count="team"></span>
+  </div>
+  <ul class="tasks" data-group="team">
+    <li class="task high" data-id="tm-merge-sarvad">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Delete the committed <code>predictions.json</code></div>
-        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
-        <details><summary>What's actually wrong with it</summary><div class="detail">
-          <p>2,016 rows with exactly <strong>one unique value tuple</strong> across all of them, dated Sep 9&ndash;16 (in the future). Both of the forecast screen's own error banners fire on it permanently.</p>
-          <p><strong>Nothing to debug here.</strong> It is stale output from the Aug 2 weights, which predate the sliding-window fix. Running the current code produces 1,365 distinct rows across 2,016 steps &mdash; the model is fine, the file is just old. Once <code>forecasts/latest</code> is live, delete it rather than regenerating.</p>
+        <div class="ttl">Merge <code>develop_sarvad</code> into <code>main</code> and get the app building on Expo 57</div>
+        <div class="tags"><span class="tag high">High</span><span class="tag">Sarvad</span><span class="tag date">Oct 10&ndash;13</span><span class="tag warn">New</span></div>
+        <details><summary>Three conflicts and an untested upgrade</summary><div class="detail">
+          <p><code>git merge-tree</code> against <code>origin/main</code> reports conflicts in <code>checklist.html</code> (both sides added it), <code>frontend/app/model.tsx</code> and <code>frontend/app/predictions.tsx</code>. In the two tab files the conflict is the import path of <code>global.ts</code>; keep Anish Jr's tab logic and take Sarvad's <code>../components/styles/global</code> path. For <code>checklist.html</code>, keep the one on <code>main</code>.</p>
+          <p>The same commit bumps <code>expo</code> 54&rarr;57, <code>react-native</code> 0.81&rarr;0.86, <code>react</code> 19.1&rarr;19.2 and <code>typescript</code> 5.9&rarr;6.0, drops <code>react-navigation-stack</code>, and adds <code>@types/react-native ~0.69.1</code> (a years-old types package). Nobody has reported running the app on it. After the merge run <code>npx tsc --noEmit</code> and open every tab, including Forecast and Model, before anything else is built on top. If it does not build, pinning back to the 54 dependency set is the fast fallback.</p>
         </div></details>
       </div></div>
     </li>
-
-    <li class="task" data-id="aj-ckpt">
+    <li class="task" data-id="tm-ci">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Save hyperparameters alongside the model weights</div>
-        <div class="tags"><span class="tag date">Sept 13&ndash;27</span></div>
-        <details><summary>Why it matters right now</summary><div class="detail">
-          <p><code>torch.save(model.state_dict())</code> at <code>lstm.py:164</code> records nothing about <code>SEQ_LEN</code>, <code>NUM_SPOTS</code>, <code>RESAMPLE_FREQ_MIN</code>, or feature order.</p>
-          <p>This bites immediately: loading an old 5-spot checkpoint after the switch to 2 spots fails cryptically rather than saying what's wrong. Save a dict with the hyperparameters and a training timestamp.</p>
+        <div class="ttl">Add a CI workflow that runs <code>pytest ml</code> and <code>tsc --noEmit</code> on push</div>
+        <div class="tags"><span class="tag date">Sept 24&ndash;Oct 8</span></div>
+        <details><summary>Both checks pass today, nothing runs them</summary><div class="detail">
+          <p>The only workflow is <code>.github/workflows/claude.yml</code>, triggered by <code>@claude</code> comments. Now that there is a real pytest suite (8 tests, green with the Oct 4 additions) and the frontend type-checks clean, a twenty-line workflow keeps them that way. Install from <code>ml/requirements.txt</code>; the tests do not need the data file or the checkpoint.</p>
         </div></details>
       </div></div>
     </li>
-
-    <li class="task crit" data-id="aj-archive">
+    <li class="task" data-id="tm-guide">
       <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Archive every forecast from day one &mdash; or the Model tab is impossible later</div>
-        <div class="tags"><span class="tag crit">Do early</span><span class="tag date">Sept 6&ndash;13</span></div>
-        <details><summary>Why this cannot wait</summary><div class="detail">
-          <p>If the hourly job only ever overwrites <code>forecasts/latest</code>, every past prediction is destroyed as it is replaced. You can then never answer the one question that proves the model works: <em>what did we predict last Tuesday, and what actually happened?</em></p>
-          <p>Write each run to <code>forecastRuns/{timestamp}</code> as well. It is a few lines now and unrecoverable later &mdash; the same shape of mistake as not capturing sensor data.</p>
+        <div class="ttl">Restore the old Firebase guide next to <code>SCHEMA.md</code>, with the obsolete sections marked</div>
+        <div class="tags"><span class="tag date">Sept 7&ndash;14</span></div>
+        <details><summary>Where it is</summary><div class="detail">
+          <p><code>git show 31493b8:FIREBASE_SETUP_FOR_AYAAN.md &gt; docs/firebase-setup.md</code>. &sect;3 (schema) and &sect;6 (export script) are still useful. &sect;4a (device writes over REST with the API key) and &sect;4b (rules) describe the design the poller replaced; mark them as such rather than deleting, so nobody re-derives them.</p>
         </div></details>
       </div></div>
     </li>
-
-    <li class="task high" data-id="aj-modelpage">
-      <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Build the Model tab</div>
-        <div class="tags"><span class="tag high">High</span><span class="tag date">Sept 27&ndash;Oct 10</span></div>
-        <details><summary>What goes on it, in priority order</summary><div class="detail">
-          <p><strong>The tab&rsquo;s job is to show the decision, not the architecture.</strong> Nobody is impressed by &ldquo;2 layers, 64 hidden units.&rdquo; They are impressed by evidence that you measured two approaches and picked one.</p>
-          <p><strong>1. Which model is live, and the numbers behind it.</strong> Baseline vs LSTM, head to head, on real data, with the serving one marked. Most projects never build a baseline at all &mdash; showing that the simple method won, if it does, demonstrates judgement rather than weakness.</p>
-          <p><strong>2. Prediction vs reality.</strong> Last week&rsquo;s forecast overlaid on what actually happened. The most honest panel on the page and the one that proves the thing works. Depends entirely on the archiving task above.</p>
-          <p><strong>3. Data health.</strong> Rows collected, days of coverage, gaps detected, last reading received. Doubles as the only visible check on cron jobs running unattended on a server nobody watches.</p>
-          <p><strong>4. Accuracy as data accumulated.</strong> A small chart of accuracy against weeks of training data, telling the cold-start story: nothing on Sept 6, baseline online Sept 13, LSTM overtakes it (or does not) around Sept 27. Free if the weekly retrains log their metrics.</p>
-          <p><strong>5. How it works.</strong> A short ESP32 &rarr; Firestore &rarr; model explainer. Home gestures at the hardware; this is where the ML half gets explained.</p>
-          <p>Feed it from a single <code>models/status</code> document written by the training and forecast jobs &mdash; one cheap read, and it makes the cron jobs self-reporting. Do not count documents in <code>occupancySnapshots</code> to get row counts; that bills a read per document.</p>
-        </div></details>
-      </div></div>
-    </li>
-
-    <li class="task" data-id="aj-tests">
-      <div class="row"><input type="checkbox"><div class="body">
-        <div class="ttl">Make the tests capable of failing</div>
-        <div class="tags"><span class="tag date">Sept 27&ndash;Oct 10</span></div>
-        <details><summary>They currently cannot</summary><div class="detail">
-          <p><code>ml/test_lstm.py:61</code> wraps everything in a bare <code>except</code> that prints &ldquo;fail:&rdquo; and then <strong>exits 0</strong>. Verified by pointing it at a missing data file &mdash; exit code 0. It can never fail CI.</p>
-          <p>Neither file is actually pytest despite the <code>test_</code> naming. Also commit <code>ml/test_predictweek.py</code>, which is currently untracked and so runs on nobody else's machine.</p>
-          <p>While here: <code>matplotlib</code> is imported at <code>lstm.py:19</code>, never used, and <strong>absent from <code>requirements.txt</code></strong> &mdash; it works locally and raises <code>ImportError</code> on a fresh clone. Drop the import.</p>
-        </div></details>
-      </div></div>
-    </li>
-
   </ul>
 </section>
 
 <section>
   <h2 class="sec">Definition of done</h2>
   <div class="ownerhead">
-    <h3 class="owner">Must be true on Sept 6</h3>
+    <h3 class="owner">Was supposed to be true on Sept 6</h3>
     <span class="count" data-count="dod"></span>
   </div>
   <ul class="tasks" data-group="dod">
-    <li class="task" data-id="dod-rules"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Firestore rules published and not expiring</div></div></div></li>
-    <li class="task" data-id="dod-sensors"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Sensors writing to <code>occupancySnapshots</code> continuously and unattended</div><div class="tags"><span class="tag crit">Irreplaceable</span></div></div></div></li>
-    <li class="task" data-id="dod-key"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">API key rotated</div>
-      <details><summary>Detail</summary><div class="detail"><p><code>parking.tsx:17</code> has a Firebase API key committed in plaintext. It is also malformed &mdash; Google keys start <code>AIzaSy</code> and this one has a stray leading <code>Y</code>. Rotate it, move it out of the component, and don't commit the replacement.</p></div></details>
-    </div></div></li>
-    <li class="task" data-id="dod-archive"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Forecast archiving in place before the first forecast runs</div></div></div></li>
-    <li class="task" data-id="dod-merged"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">All branches merged to main</div></div></div></li>
+    <li class="task" data-id="dod-rules"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Firestore rules published and not expiring</div><div class="tags"><span class="tag warn">Unverified</span></div></div></div></li>
+    <li class="task" data-id="dod-sensors"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Readings appended to <code>occupancySnapshots</code> continuously and unattended</div><div class="tags"><span class="tag crit">Irreplaceable</span><span class="tag crit">Still not provable from the repo</span></div></div></div></li>
+    <li class="task" data-id="dod-archive"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Forecast archiving in place before the first forecast runs</div><div class="tags"><span class="tag ok">Code written</span><span class="tag warn">Dry-run only, never published</span></div></div></div></li>
+    <li class="task" data-id="dod-merged"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">All branches merged to main</div><div class="tags"><span class="tag warn">Reopened Oct 4</span><span class="tag">develop_sarvad e3f299f unmerged</span></div></div></div></li>
   </ul>
-  <div class="note">Explicitly <strong>not</strong> required on Sept 6: a working app, a working forecast, or a trained model. None of that data exists yet, and every bit of it can be built later against readings already banked.</div>
+  <div class="note">The first two are the ones that matter, and they are the two that are not done. Everything else on this page can be built later against banked readings; those two cannot.</div>
 
   <div class="ownerhead" style="margin-top:40px">
     <h3 class="owner">Must be true on Oct 15</h3>
     <span class="count" data-count="dod2"></span>
   </div>
   <ul class="tasks" data-group="dod2">
-    <li class="task" data-id="d2-crash"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">App installs, opens, and no tab crashes</div></div></div></li>
-    <li class="task" data-id="d2-live"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Parking screen shows 2 real spots from <code>current/state</code></div></div></div></li>
+    <li class="task" data-id="d2-crash"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">App installs, opens, and no tab crashes</div><div class="tags"><span class="tag ok">Model tab no longer crashes</span><span class="tag warn">Expo 57 untested</span></div></div></div></li>
+    <li class="task" data-id="d2-live"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Parking screen shows 2 real spots from whichever path the schema task settles on</div><div class="tags"><span class="tag warn">A2 has no writer</span></div></div></div></li>
     <li class="task" data-id="d2-forecast"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Forecast screen reads live data, no rebuild required to update it</div></div></div></li>
     <li class="task" data-id="d2-model"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Model choice made on measured evidence, not assumption</div></div></div></li>
-    <li class="task" data-id="d2-modeltab"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Model tab built, or the tab removed deliberately</div></div></div></li>
-    <li class="task" data-id="d2-cron"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Cron jobs running unattended with visible failure alerting</div></div></div></li>
+    <li class="task" data-id="d2-modeltab"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Model tab shows real numbers from <code>models/status</code>, not the collecting-data placeholder</div><div class="tags"><span class="tag ok">UI built</span><span class="tag warn">No writer yet</span><span class="tag warn">Merge conflict with Sarvad</span></div></div></div></li>
+    <li class="task" data-id="d2-cron"><div class="row"><input type="checkbox"><div class="body"><div class="ttl">Poller and both scheduled jobs running unattended with visible failure alerting</div></div></div></li>
   </ul>
 </section>
 
 <section>
   <h2 class="sec">Schedule</h2>
-  <div class="ownerhead"><h3 class="owner">Sequencing</h3></div>
+  <div class="ownerhead"><h3 class="owner">Sequencing, proposed on Oct 4</h3></div>
+  <div class="note" style="margin-top:14px">The Sept 7 schedule is gone because its capture-start date never got confirmed. These dates are a proposal for the 11 days left, not something anyone has agreed to; the first row decides whether the rest holds.</div>
   <div class="scroll" style="margin-top:16px">
     <table>
       <thead><tr><th>Dates</th><th>Focus</th></tr></thead>
       <tbody>
-        <tr><td class="when">Aug 21&ndash;28</td><td>Rules published. Merge branches. Firmware committed, repointed at Firestore.</td></tr>
-        <tr><td class="when">Aug 29&ndash;Sept 5</td><td><strong>Firmware deployed and writing real data.</strong> Service key, dependencies, buffer.</td></tr>
-        <tr><td class="when">Sept 6</td><td><strong>Capture begins. The one date that cannot slip.</strong></td></tr>
-        <tr><td class="when">Sept 6&ndash;13</td><td>Validate real data end to end. <code>ingest.py</code>. Forecast archiving. Cron jobs. Spot count 5&rarr;2.</td></tr>
-        <tr><td class="when">Sept 13&ndash;27</td><td>Baseline live. Retrain on real data. Parking screen to Firestore.</td></tr>
-        <tr><td class="when">Sept 27&ndash;Oct 10</td><td>LSTM vs baseline decided on evidence. Model tab. Forecast screen. UI cleanup.</td></tr>
-        <tr><td class="when">Oct 11&ndash;15</td><td>Polish and buffer. <strong>App due Oct 15.</strong></td></tr>
+        <tr><td class="when">Oct 4&ndash;5</td><td>Stash local frontend edits and pull. <strong>Console check</strong>: which path holds real readings, how many days, both spots? Rules expiry. <strong>LSTM decision gate</strong> based on what the console shows.</td></tr>
+        <tr><td class="when">Oct 5&ndash;7</td><td><code>SCHEMA.md</code> agreed by all three. Poller writing the agreed history, both spots, running unattended. <code>ingest.py</code>. Baseline published to <code>forecasts/latest</code> as the safety net.</td></tr>
+        <tr><td class="when">Oct 7&ndash;10</td><td><code>models/status</code> and <code>models/recent</code> written. LSTM retrained on real data and scored against the baseline on held-out days. Hourly and weekly jobs scheduled.</td></tr>
+        <tr><td class="when">Oct 10&ndash;13</td><td>Forecast tab on <code>forecasts/latest</code>. Model tab checked against real documents. <code>develop_sarvad</code> merged, conflicts resolved, app building on Expo 57, every tab opened.</td></tr>
+        <tr><td class="when">Oct 13&ndash;15</td><td>CI, leftover UI cleanup, buffer. <strong>App due Oct 15.</strong></td></tr>
       </tbody>
     </table>
   </div>
@@ -632,18 +703,22 @@ service cloud.firestore {
     <table>
       <thead><tr><th>Risk</th><th>Why it matters</th></tr></thead>
       <tbody>
-        <tr><td><strong>Firestore test-mode expiry</strong></td><td>Silent, dated, and lands near go-live. Cheapest fix on this page; worst failure mode if missed.</td></tr>
-        <tr><td><strong>Firmware</strong></td><td>Unknown status, zero lines committed in 5.5 months of project time, everything downstream depends on it, and it now needs repointing to Firestore.</td></tr>
-        <tr><td><strong>No history is being retained</strong></td><td>Nothing currently stores past readings. Every day before firmware lands is a day of training data permanently lost.</td></tr>
-        <tr><td><strong>The data layer has no code in the repo</strong></td><td>Ingestion blocks both other tracks. If it slips, someone has to absorb it.</td></tr>
-        <tr><td><strong>No CI anywhere</strong></td><td>The only workflow triggers on <code>@claude</code> comments. No build, lint, or tests run on push, on any branch.</td></tr>
+        <tr><td><strong>History may not exist, or may be outage records</strong></td><td>Nothing in the repo proves real readings were captured, and the only collection anyone has pointed at (<code>obervations</code>) is, in the code on <code>main</code>, written only when the sensor is unreachable. Past Sept 24 an honest three-week LSTM comparison could not happen before Oct 15, and the LSTM has to ship anyway.</td></tr>
+        <tr><td><strong>The LSTM is required with unknown data</strong></td><td>If the console shows under about three weeks, the LSTM trains on a small set and may lose to the baseline. The agreed fallback is to ship it with the limited-data caveat visible on the Model tab. Anything stronger needs the date or the data to change.</td></tr>
+        <tr><td><strong>Expo 54&rarr;57 and React Native 0.81&rarr;0.86 in one commit</strong></td><td>Untested on a device or simulator by anyone who has reported it, 11 days before the deadline. It touches every tab, including the two that Anish Jr's work feeds.</td></tr>
+        <tr><td><strong>The poller is a laptop on a LAN</strong></td><td>Capture now depends on a Python process staying alive on the temple's WiFi, reaching a hardcoded IP. If it runs on someone's personal laptop, it stops when they go home.</td></tr>
+        <tr><td><strong>Firestore test-mode expiry</strong></td><td>Still unverified. Silent, dated, probably lands this month. Cheapest fix on this page.</td></tr>
+        <tr><td><strong>Five schemas, still no agreement</strong></td><td>The Parking screen, the lot map, the poller, Ayaan's <code>mlmodel.py</code>, the Model tab and the forecast job each target different paths, and spot A2 is read by the lot map but written by nothing. Nothing reads what everything else writes until someone writes <code>SCHEMA.md</code>.</td></tr>
+        <tr><td><strong>The ML pipeline works on synthetic data only</strong></td><td><code>predict_week.py</code> now forecasts and publishes, but it has only been dry-run on the synthetic CSV and has no real data source (<code>ingest.py</code> does not exist). A green test run says the plumbing works, not that real forecasts do. Exit code 0 on insufficient data is deliberate, so a quiet failure needs the Model tab banner or an alert to be seen.</td></tr>
+        <tr><td><strong>Firmware still uncommitted</strong></td><td>Now known to be an HTTP server sketch, still on one laptop, still zero lines in the repo after six months.</td></tr>
+        <tr><td><strong>No CI</strong></td><td>A real test suite (8 tests) exists now and nothing runs it. Regressions in <code>lstm.py</code> will be found by the cron job at 3am.</td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
 <footer>
-  <p>Temporary working document &middot; Checkbox state is stored per browser, so each person's ticks are their own.</p>
+  <p>Temporary working document &middot; revised Oct 4 after <code>d5ca71c</code> (Ayaan, <code>main</code>) and <code>e3f299f</code> (Sarvad, <code>develop_sarvad</code>) &middot; Checkbox state is stored per browser, so each person's ticks are their own and survive this revision (task ids are unchanged). The live database could not be checked from the machine that produced this revision; items tagged Unverified need a human with console access. Items tagged &ldquo;uncommitted&rdquo; exist only in Anish Jr's working tree.</p>
 </footer>
 
 </div>
@@ -683,12 +758,11 @@ service cloud.firestore {
   }
 
   var today=new Date(); today.setHours(0,0,0,0);
-  function countdown(el,d){
-    var n=Math.round((d-today)/86400000);
-    document.getElementById(el).textContent=n>0?n:(n===0?'0':'past');
-  }
-  countdown('days', new Date(2026,8,6));
-  countdown('days2', new Date(2026,9,15));
+  // sept 6 is behind us now, so count up from it instead of down to it
+  var since=Math.round((today-new Date(2026,8,6))/86400000);
+  document.getElementById('days').textContent=since>=0?since:'0';
+  var left=Math.round((new Date(2026,9,15)-today)/86400000);
+  document.getElementById('days2').textContent=left>0?left:(left===0?'0':'past');
 
   var root=document.documentElement, tt=document.getElementById('tt');
   tt.addEventListener('click',function(){
