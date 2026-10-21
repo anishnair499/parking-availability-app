@@ -1,10 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { colors } from "../components/styles/global";
+import {createStaticNavigation} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
 
 export default function App() {
+  
+
   return (
+    
     <Tabs
       screenOptions={{
         headerShown: false,

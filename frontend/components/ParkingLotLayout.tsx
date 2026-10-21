@@ -7,8 +7,8 @@ import { getDatabase, ref, onValue } from 'firebase/database';
 import { app } from '../lib/firebase';
 import { getFirestore , onSnapshot, doc} from 'firebase/firestore';
 export default function ParkingLotSvg() {
-const [distance1, setDistance1] = useState<boolean | null>(null)
-const [distance2, setDistance2] = useState<boolean | null>(null)
+  const [distance1, setDistance1] = useState<boolean | null>(null);
+  const [distance2, setDistance2] = useState("Loading...")
   const [propertiesShown, showProperties] = useState(false)
   const {width, height} = useWindowDimensions();
   const scale = width / 2063;
@@ -18,26 +18,12 @@ const [distance2, setDistance2] = useState<boolean | null>(null)
   // firestore, so once that got added the options stopped matching and this threw
   // "app already exists with different options". one shared app fixes it for good.
 useEffect(() => {
-  const db = getFirestore(app);
-  const unSubscribe = onSnapshot(
-    doc(db, 'parkingLots', 'lot1', 'spots', 'A1', 'current', 'status'),
-    (snapshot) => {
-      const distance1 = snapshot.data()?.available;
-      setDistance1(distance1);
-    }
-  );
-  return () => unSubscribe();
-}, []);
 
-useEffect(() => {
-  const db = getFirestore(app);
-  const unSubscribe = onSnapshot(
-    doc(db, 'parkingLots', 'lot1', 'spots', 'A2', 'current', 'status'),
-    (snapshot) => {
-      const distance2 = snapshot.data()?.available;
-      setDistance2(distance2);
-    }
-  );
+  const db = getDatabase(app);
+  const unSubscribe = onValue(ref(db, '/spots/spot2/distance'), snapshot => {
+    const distance2 = snapshot.val();
+    setDistance2(distance2)
+  });
   return () => unSubscribe();
 }, []);
 
@@ -51,9 +37,8 @@ useEffect(() => {
       ॐ Temple
       </Text>
       <Rect x = "300" y = "225" height = "600" width = "1000" fill = "none" stroke = "black" strokeWidth = "5"></Rect>
-        <Rect x="10" y="265" height="120" width="188"
-        fill={distance1 === null ? "gray" : distance1 ? "green" : "red"} />
-        <Rect x = "10" y = "410" height = "120" width = "188" fill = "red"></Rect>
+    {parseInt(distance2, 10) < 30 ? <Rect x = "10" y = "205" height = "90" width = "188" fill = "red"></Rect>:<Rect x = "10" y = "205" height = "90" width = "188" fill = "green"></Rect> }
+          <Rect x = "10" y = "410" height = "120" width = "188" fill = "red"></Rect>
         <Rect x = "10" y = "555" height = "120" width = "188" fill = "red"></Rect>
         <Rect x = "10" y = "695" height = "120" width = "188" fill = "red"></Rect>
         <Rect x = "10" y = "835" height = "120" width = "188" fill = "red"></Rect>
