@@ -2,8 +2,8 @@ import { View, Text, StyleSheet, Switch } from "react-native";
 import { useFonts } from "expo-font";
 import * as React from "react";
 import { useState } from "react";
-import { colors } from "./styles/global";
-import {globalStyles} from "./styles/global"
+import { colors } from "../components/styles/global";
+import {globalStyles} from "../components/styles/global"
 export default function Settings() {
   const [isDark, setIsDark] = useState(false);
 
