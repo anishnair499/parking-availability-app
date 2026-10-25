@@ -37,7 +37,7 @@ useEffect(() => {
       ॐ Temple
       </Text>
       <Rect x = "300" y = "225" height = "600" width = "1000" fill = "none" stroke = "black" strokeWidth = "5"></Rect>
-    {parseInt(distance2, 10) < 30 ? <Rect x = "10" y = "205" height = "90" width = "188" fill = "red"></Rect>:<Rect x = "10" y = "205" height = "90" width = "188" fill = "green"></Rect> }
+    {parseInt(distance2, 10) < 30 ? <Rect x = "10" y = "260" height = "120" width = "188" fill = "red"></Rect>:<Rect x = "10" y = "260" height = "120" width = "188" fill = "green"></Rect> }
           <Rect x = "10" y = "410" height = "120" width = "188" fill = "red"></Rect>
         <Rect x = "10" y = "555" height = "120" width = "188" fill = "red"></Rect>
         <Rect x = "10" y = "695" height = "120" width = "188" fill = "red"></Rect>
