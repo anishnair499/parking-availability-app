@@ -3,6 +3,12 @@ from firebase_admin import credentials, firestore
 import csv
 import pandas as pd
 import random
+import numpy as np
+from datetime import datetime, timedelta
+
+# Generate a single value or an entire array at once
+rng = np.random.default_rng()
+
 
 cred = credentials.Certificate("C:/Users/aites/Downloads/parking-project-30a86-firebase-adminsdk-fbsvc-1fd81ffcc8.json")
 firebase_admin.initialize_app(cred)
@@ -41,7 +47,6 @@ for doc in docs:
     else:
         print("Updated At: No timestamp found")
     if str(availability_at_ts):
-        # Converts native Firestore Timestamp to python datetime
         print(f"Availbility: {availability_at_ts}")
             
         i+=1
@@ -51,6 +56,15 @@ for doc in docs:
     rows.append({"timestamp":created_at_ts, "spot_1":int(availability_at_ts), "spot_2":random.randint(0,1)})
 print(t)
 print(i)
+print(type(created_at_ts))
+
+for i in range(30240):
+    created_at_ts += timedelta(minutes=1)
+    val = rng.normal(loc=0.0, scale=1.0)
+    val1 = rng.normal(loc=0.0, scale=1.0)
+    zero_or_one = 1 if val > 0 else 0
+    zero_or_one1 = 1 if val1 > 0 else 0
+    rows.append({"timestamp": created_at_ts, "spot_1":zero_or_one, "spot_2":zero_or_one1})
 
 with open('availability.csv', 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=headers)
