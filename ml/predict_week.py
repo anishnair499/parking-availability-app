@@ -6,16 +6,17 @@ import torch.nn as nn
 import pandas as pd
 from pathlib import Path
 from lstm import (
-    ParkingLSTM, resample_occupancy,load_checkpoint, check_window, add_time_features, FEATURE_COLS,
+    ParkingLSTM, resample_occupancy,load_checkpoint, check_window, check_no_gaps ,add_time_features, FEATURE_COLS,
     SEQ_LEN, INPUT_DIM, NUM_LAYERS, NUM_SPOTS, HIDDEN_DIM, RESAMPLE_FREQ_MIN, DATA_DIR
 )
 import json
 from datetime import timedelta
-
+from ingest import load_csv, csv_path, get_db, local_now, fmt_ts, warn_stale
 
 def forecast_week(model, df, device):
     df = resample_occupancy(df)
     check_window(df)
+    check_no_gaps(df)
     df = add_time_features(df)
 
     window_data = df[FEATURE_COLS].values[-SEQ_LEN:]
@@ -61,29 +62,51 @@ def forecast_week(model, df, device):
     return forecast
 
 
+def publish_forecast(forecast):
+    from datetime import datetime, timezone
+
+    db = get_db()
+    ran_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    payload = {"generatedAt": ran_at, "model": "lstm", "points": forecast}
+
+    # latest is what the app reads, forecastRuns keeps every run so we can score old forecasts later
+    db.collection("forecasts").document("latest").set(payload)
+    db.collection("forecastRuns").document(ran_at).set(payload)
+    # shows up as "last forecast" on the model tab. merge so the scores training wrote stay put
+    db.collection("models").document("status").set({"lastForecastRun": fmt_ts(local_now())}, merge=True)
+
+    print(f"published {len(forecast)} points, archived as forecastRuns/{ran_at}")
+
+
 if __name__ == '__main__':
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(description="forecast the next week and publish it to firestore")
+    parser.add_argument("--csv", default=str(csv_path), help="readings file (default ml/availability.csv)")
+    parser.add_argument("--dry-run", action="store_true", help="print a summary and skip the firestore write")
+    args = parser.parse_args()
+
+    ckpt = DATA_DIR / "parking_lstm.pth"
+    if not ckpt.exists():
+        sys.exit("no parking_lstm.pth yet. run `python lstm.py` first")
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Running on: {device}")
-    model, ck = load_checkpoint(DATA_DIR / "parking_lstm.pth", device)
-    print(f"loaded model trained {ck['trained_at']} for {ck["num_spots"]} spots")
-    from datetime import datetime, timezone
-    import firebase_admin
-    from firebase_admin import credentials, firestore
+    model, ck = load_checkpoint(ckpt, device)
+    print(f"loaded model trained {ck['trained_at']} for {ck['num_spots']} spots")
 
-    DATA_DIR = Path(__file__).parent
+    window = load_csv(args.csv)
+    warn_stale(window)
 
-    def _db():
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(credentials.Certificate(DATA_DIR / "serviceAccountKey.json")) 
-        return firestore.client()
-    def publish_forecast(forecast, model_name="lstm"):
-        db = _db()
-        ran_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        payload = {"generatedAt": ran_at, "model": model_name, "points": forecast}
+    try:
+        forecast = forecast_week(model, window, device)
+    except ValueError as e:
+        # not enough unbroken readings is expected on thin data. say so and stop instead of publishing garbage
+        print(f"skipping forecast: {e}")
+        sys.exit(1)
 
-        db.collection("forecasts").document("latest").set(payload)
-        db.collection("forecastRuns").document(ran_at).set(payload)
-
-        print(f"published {len(forecast)} points, archived as forecastRuns/{ran_at}")         
-    #TODO: SET UP A CRONJOB HOURLY HERE NOT NOW BUT LATER UNTIL GIVEN FIRST 4 HOURS OF DATA 
-    # AND THEN SLIDING WINDOW CAN BE USED
+    if args.dry_run:
+        print(f"dry run: built {len(forecast)} points from {forecast[0]['timestamp']} to {forecast[-1]['timestamp']}")
+    else:
+        publish_forecast(forecast)
