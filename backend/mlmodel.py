@@ -5,13 +5,17 @@ import pandas as pd
 import random
 import numpy as np
 from datetime import datetime, timedelta
+import os, json
+from dotenv import load_dotenv
 
-# Generate a single value or an entire array at once
+load_dotenv()
+
+service_account_info = json.loads(os.environ["FIREBASE_KEY_JSON"])
+cred = credentials.Certificate(service_account_info)
+firebase_admin.initialize_app(cred)
+
 rng = np.random.default_rng()
 
-
-cred = credentials.Certificate("C:/Users/aites/Downloads/parking-project-30a86-firebase-adminsdk-fbsvc-1fd81ffcc8.json")
-firebase_admin.initialize_app(cred)
 
 
 db = firestore.client()
