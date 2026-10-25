@@ -10,8 +10,8 @@ import {
   View,
 } from "react-native";
 import Svg, { Line, Polyline, Rect } from "react-native-svg";
+import { colors, globalStyles } from "../components/styles/global";
 import { db } from "../lib/firebase";
-import { colors, globalStyles } from "./styles/global";
 
 const font = "Montserrat-Bold";
 const MONTHS = [

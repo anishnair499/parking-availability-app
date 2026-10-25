@@ -2,8 +2,8 @@ import { useFonts } from "expo-font";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, globalStyles } from "../components/styles/global";
 import { db } from "../lib/firebase";
-import { colors, globalStyles } from "./styles/global";
 
 const DAYS = ["su", "mo", "tu", "we", "th", "fr", "sa"];
 const BUCKETS = ["12-6a", "6a-12p", "12-6p", "6p-12a"];
