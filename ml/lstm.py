@@ -267,6 +267,18 @@ def data_summary(raw, grid):
     }
 
 
+def split_windows(starts, n_rows):
+    # split the usable windows 80/20 in time order. splitting by row count left zero train windows
+    # when the only unbroken stretch sat at the very end of the file
+    if starts:
+        split = starts[int(len(starts) * 0.8)] + SEQ_LEN
+    else:
+        split = int(n_rows * 0.8)
+    train = [i for i in starts if i + SEQ_LEN < split]
+    val = [i for i in starts if i + SEQ_LEN >= split]
+    return train, val
+
+
 def run_training(csv_path, publish):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -281,11 +293,9 @@ def run_training(csv_path, publish):
     features = grid[FEATURE_COLS].values
     targets = grid[TARGET_COLS].values
 
-    # train/val split by time (80/20). windows never straddle a gap
-    split = int(len(features) * 0.8)
+    # train/val split by time (80/20) over the usable windows. windows never straddle a gap
     starts = window_starts(blocks)
-    train_starts = [i for i in starts if i + SEQ_LEN < split]
-    val_starts = [i for i in starts if i >= split - SEQ_LEN]
+    train_starts, val_starts = split_windows(starts, len(features))
     # bail before training so thin data never overwrites the checkpoint or publishes
     check_enough_windows(blocks, len(train_starts), len(val_starts))
 

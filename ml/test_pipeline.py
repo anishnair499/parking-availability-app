@@ -90,3 +90,12 @@ def test_loader_drops_future_rows(tmp_path):
         lines.append(f"{(now + pd.Timedelta(days=d)).isoformat()},1,0")
     f.write_text("\n".join(lines) + "\n")
     assert len(load_csv(f)) == 1
+
+def test_split_uses_windows_not_rows():
+    from lstm import split_windows
+
+    # every usable window is in the last 20% of the rows, like sparse early data then one long stretch
+    starts = list(range(9000, 10000))
+    train, val = split_windows(starts, 12000)
+    assert len(train) == 800 and len(val) == 200
+    assert max(train) < min(val)
