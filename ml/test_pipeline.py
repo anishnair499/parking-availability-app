@@ -81,3 +81,12 @@ def test_recent_is_hourly_and_matches_what_the_tab_reads():
     assert pts[0]["pred"] == [0.25, 0.25] and pts[0]["act"] == [0, 0]
     assert pd.to_datetime(pts[1]["t"]) - pd.to_datetime(pts[0]["t"]) == pd.Timedelta(hours=1)
     assert "T" not in pts[0]["t"]
+
+def test_loader_drops_future_rows(tmp_path):
+    f = tmp_path / "future.csv"
+    now = pd.Timestamp.now(tz="UTC")
+    lines = ["timestamp,spot_1,spot_2"]
+    for d in (-1, 1):
+        lines.append(f"{(now + pd.Timedelta(days=d)).isoformat()},1,0")
+    f.write_text("\n".join(lines) + "\n")
+    assert len(load_csv(f)) == 1

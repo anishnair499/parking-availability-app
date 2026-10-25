@@ -39,6 +39,7 @@ def load_csv(path=csv_path):
     ts = pd.to_datetime(df["timestamp"], utc=True, format="mixed")
     df['timestamp'] = ts.dt.tz_convert(lot_timezone).dt.tz_localize(None)
     df = df[["timestamp"] + spots].dropna(subset=["timestamp"])
+    df = df[df["timestamp"] <= local_now()]
     if df.empty:
         raise ValueError(f"{path} has no readings in it")
     return df.sort_values("timestamp").reset_index(drop=True)
