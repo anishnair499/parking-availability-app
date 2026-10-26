@@ -1,4 +1,6 @@
 filelock==3.25.1
+firebase-admin
+requests==2.34.2
 fsspec==2026.2.0
 Jinja2==3.1.6
 joblib==1.5.3

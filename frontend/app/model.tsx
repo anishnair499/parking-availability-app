@@ -10,8 +10,8 @@ import {
   View,
 } from "react-native";
 import Svg, { Line, Polyline, Rect } from "react-native-svg";
+import { colors, globalStyles } from "../components/styles/global";
 import { db } from "../lib/firebase";
-import { colors, globalStyles } from "./styles/global";
 
 const font = "Montserrat-Bold";
 const MONTHS = [
@@ -31,7 +31,6 @@ const MONTHS = [
 
 // sensors go live sep 6
 const CAPTURE_START = new Date(2026, 8, 6);
-const BASELINE_DAYS = 7;
 const LSTM_DAYS = 21;
 
 const STALE_MINS = 15;
@@ -175,20 +174,16 @@ export default function Model() {
 
         <Text style={s.h2}>whats waiting on what</Text>
 
-        <Unlock label="hourly forecast" need={BASELINE_DAYS} have={days} />
-        <Unlock label="model comparison" need={LSTM_DAYS} have={days} />
-
+        <Unlock label="lstm forecast" need={LSTM_DAYS} have={days} />
         <Text style={{ ...globalStyles.empty, fontSize: 12, marginTop: 12 }}>
-          nothing to predict from yet. a week of readings gets the averages
-          working, three weeks is enough to tell if the lstm actually beats
-          them.
+          nothing to predict from yet. the lstm needs about three weeks of
+          readings before it can learn the daily pattern.
         </Text>
       </ScrollView>
     );
   }
 
-  const serving = status.serving === "baseline" ? "baseline" : "lstm";
-  const live = status[serving] ?? {};
+  const live = status.lstm ?? {};
   const info = status.data ?? {};
 
   const last = info.lastReading ? toDate(info.lastReading) : null;
@@ -259,7 +254,7 @@ export default function Model() {
       </Text>
 
       <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 3 }}>
-        {serving}
+        lstm
         {status.trainedAt ? " · trained " + fmt(toDate(status.trainedAt)) : ""}
         {info.rows != null ? " · " + compact(info.rows) + " readings" : ""}
       </Text>
@@ -273,59 +268,39 @@ export default function Model() {
         </View>
       )}
 
-      <Text style={s.h2}>lstm vs baseline</Text>
+      <Text style={s.h2}>how well it does</Text>
 
-      {["lstm", "baseline"].map((k) => {
-        const m = status[k];
+      {live.accuracy != null && (
+        <View style={s.bar}>
+          <Text style={{ width: 60, fontSize: 13, color: colors.text }}>
+            lstm
+          </Text>
 
-        if (!m || m.accuracy == null) return null;
-
-        const on = serving === k;
-
-        return (
-          <View key={k} style={s.bar}>
-            <Text style={{ width: 60, fontSize: 13, color: colors.text }}>
-              {k}
-            </Text>
-
-            <View style={s.track}>
-              <View
-                style={[
-                  s.fill,
-                  { width: `${Math.max(m.accuracy * 100, 2)}%` },
-                  !on && { backgroundColor: "#b6b9d1" },
-                ]}
-              />
-            </View>
-
-            <Text
-              style={{
-                width: 42,
-                textAlign: "right",
-                fontSize: 13,
-                color: colors.text,
-              }}
-            >
-              {pct(m.accuracy)}
-            </Text>
-
-            <View style={{ width: 54, alignItems: "flex-end" }}>
-              {on && (
-                <View style={s.pill}>
-                  <Text style={{ fontSize: 10, color: "#ffffff" }}>
-                    serving
-                  </Text>
-                </View>
-              )}
-            </View>
+          <View style={s.track}>
+            <View
+              style={[
+                s.fill,
+                { width: `${Math.max(live.accuracy * 100, 2)}%` },
+              ]}
+            />
           </View>
-        );
-      })}
+
+          <Text
+            style={{
+              width: 42,
+              textAlign: "right",
+              fontSize: 13,
+              color: colors.text,
+            }}
+          >
+            {pct(live.accuracy)}
+          </Text>
+        </View>
+      )}
 
       <Text style={{ ...globalStyles.empty, fontSize: 12, marginTop: 8 }}>
-        baseline is just the average for that hour and weekday, no learning
-        involved. the lstm only earns its spot by beating it, otherwise wed ship
-        the simple thing.
+        scored on the newest 20% of the readings, which the model never trained
+        on.
       </Text>
 
       {pts.length > 0 && (

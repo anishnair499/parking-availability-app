@@ -1,11 +1,10 @@
 import { useFonts } from "expo-font";
-import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, globalStyles } from "./styles/global";
+import { colors, globalStyles } from "../components/styles/global";
+import { db } from "../lib/firebase";
 
-const rows = require("../assets/predictions.json");
-
-const SPOTS = ["spot_1", "spot_2", "spot_3", "spot_4", "spot_5"];
 const DAYS = ["su", "mo", "tu", "we", "th", "fr", "sa"];
 const BUCKETS = ["12-6a", "6a-12p", "12-6p", "6p-12a"];
 const MONTHS = [
@@ -34,10 +33,6 @@ function toDate(ts: string) {
   return new Date(+y, +mo - 1, +d, +h, +mi);
 }
 
-const dates = rows.map((r: any) => toDate(r.timestamp));
-const first = dates[0];
-const last = dates[dates.length - 1];
-
 function fmt(d: Date) {
   return MONTHS[d.getMonth()] + " " + d.getDate();
 }
@@ -49,7 +44,7 @@ function bucket(h: number) {
   return 3;
 }
 
-function nearest(t: number) {
+function nearest(dates: Date[], t: number) {
   let best = 0;
   let gap = Math.abs(dates[0].getTime() - t);
 
@@ -65,7 +60,8 @@ function nearest(t: number) {
   return best;
 }
 
-function gridFor(spot: string) {
+// rows and dates come in as args now since the forecast loads from firestore instead of a bundled file
+function gridFor(rows: any[], dates: Date[], spots: string[], spot: string) {
   const sums = DAYS.map(() => [0, 0, 0, 0]);
   const counts = DAYS.map(() => [0, 0, 0, 0]);
 
@@ -77,11 +73,11 @@ function gridFor(spot: string) {
     let v = 0;
 
     if (spot === "all") {
-      for (const k of SPOTS) {
+      for (const k of spots) {
         v += r[k];
       }
 
-      v = v / SPOTS.length;
+      v = v / spots.length;
     } else {
       v = r[spot];
     }
@@ -110,22 +106,28 @@ function shade(v: number | null) {
   return colors.header;
 }
 
-let flat = rows.length > 1;
-
-for (let i = 1; i < rows.length; i++) {
-  if (SPOTS.some((k) => rows[i][k] !== rows[0][k])) {
-    flat = false;
-    break;
-  }
-}
-
 export default function Predictions() {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [err, setErr] = useState("");
   const [spot, setSpot] = useState("all");
   const [now, setNow] = useState(new Date());
 
   const [fontsLoaded] = useFonts({
     "Montserrat-Bold": require("../assets/fonts/Montserrat-VariableFont_wght.ttf"),
   });
+
+  // predict_week.py overwrites forecasts/latest every run, so this updates live
+  useEffect(() => {
+    const unSubscribe = onSnapshot(
+      doc(db, "forecasts", "latest"),
+      (snapshot) => {
+        setRows(snapshot.exists() ? (snapshot.data().points ?? []) : []);
+      },
+      (error) => setErr(error.message),
+    );
+
+    return () => unSubscribe();
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -135,7 +137,51 @@ export default function Predictions() {
     return () => clearInterval(id);
   }, []);
 
+  const dates = useMemo(
+    () => (rows ?? []).map((r) => toDate(r.timestamp)),
+    [rows],
+  );
+
+  // spots come from the data so it works for however many the model forecasts
+  const spots = useMemo(
+    () =>
+      rows && rows.length > 0
+        ? Object.keys(rows[0])
+            .filter((k) => k.startsWith("spot_"))
+            .sort()
+        : [],
+    [rows],
+  );
+
   if (!fontsLoaded) return null;
+
+  if (err) {
+    return (
+      <View style={globalStyles.container}>
+        <Text style={{ fontFamily: font, fontSize: 30, color: colors.header }}>
+          Forecast
+        </Text>
+
+        <View style={s.banner}>
+          <Text style={{ color: colors.alert, fontSize: 13 }}>
+            cant reach firestore: {err}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (rows === null) {
+    return (
+      <View style={globalStyles.container}>
+        <Text style={{ fontFamily: font, fontSize: 30, color: colors.header }}>
+          Forecast
+        </Text>
+
+        <Text style={{ ...globalStyles.empty, marginTop: 8 }}>loading...</Text>
+      </View>
+    );
+  }
 
   if (rows.length === 0) {
     return (
@@ -144,19 +190,30 @@ export default function Predictions() {
           Forecast
         </Text>
 
-        <Text style={{ ...globalStyles.empty, marginTop: 8 }}>no data</Text>
+        <Text style={{ ...globalStyles.empty, marginTop: 8 }}>
+          no forecast yet
+        </Text>
       </View>
     );
   }
 
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+
   const t = now.getTime();
-  const row = rows[nearest(t)];
-  const at = toDate(row.timestamp);
+  const idx = nearest(dates, t);
+  const row = rows[idx];
+  const at = dates[idx];
 
   const inWeek = t >= first.getTime() && t <= last.getTime();
-  const open = SPOTS.filter((k) => row[k] <= BUSY).length;
+  const open = spots.filter((k) => row[k] <= BUSY).length;
 
-  const grid = gridFor(spot);
+  // a flat forecast means the model learned nothing, worth flagging
+  const flat =
+    rows.length > 1 &&
+    rows.every((r) => spots.every((k) => r[k] === rows[0][k]));
+
+  const grid = gridFor(rows, dates, spots, spot);
   const nowDay = now.getDay();
   const nowBucket = bucket(now.getHours());
 
@@ -179,7 +236,7 @@ export default function Predictions() {
           marginTop: 2,
         }}
       >
-        {open} / 5 open
+        {open} / {spots.length} open
       </Text>
 
       <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 3 }}>
@@ -189,7 +246,7 @@ export default function Predictions() {
       {flat && (
         <View style={s.banner}>
           <Text style={{ color: colors.alert, fontSize: 13 }}>
-            same numbers every row, regen predictions.json
+            same numbers every row, the model may need more data
           </Text>
         </View>
       )}
@@ -214,7 +271,7 @@ export default function Predictions() {
         {fmt(at)}, per spot
       </Text>
 
-      {SPOTS.map((k, n) => {
+      {spots.map((k, n) => {
         const p = row[k];
 
         return (
@@ -274,7 +331,7 @@ export default function Predictions() {
           marginBottom: 14,
         }}
       >
-        {["all", ...SPOTS].map((k) => {
+        {["all", ...spots].map((k) => {
           const on = spot === k;
 
           return (

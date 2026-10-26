@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Tabs } from "expo-router";
-import { colors } from "./styles/global";
+import { colors } from "../components/styles/global";
+import {createStaticNavigation} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
-const Stack = createNativeStackNavigator();
 
 export default function App() {
+  
+
   return (
+    
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -58,7 +61,7 @@ export default function App() {
         name="predictions"
         options={{
           title: "Forecast",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }) => ( 
             <Ionicons name="stats-chart" color={color} size={size} />
           ),
         }}

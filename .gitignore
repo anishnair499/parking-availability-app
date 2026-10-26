@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.pth
+ml/occupancy_data.csv
+ml/history_cache.csv
+ml/serviceAccountKey.json
+privkey.json
