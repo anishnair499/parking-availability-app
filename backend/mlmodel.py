@@ -62,14 +62,6 @@ print(t)
 print(i)
 print(type(created_at_ts))
 
-for i in range(30240):
-    created_at_ts += timedelta(minutes=1)
-    val = rng.normal(loc=0.0, scale=1.0)
-    val1 = rng.normal(loc=0.0, scale=1.0)
-    zero_or_one = 1 if val > 0 else 0
-    zero_or_one1 = 1 if val1 > 0 else 0
-    rows.append({"timestamp": created_at_ts, "spot_1":zero_or_one, "spot_2":zero_or_one1})
-
 with open('availability.csv', 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=headers)
     
