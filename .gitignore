@@ -5,5 +5,6 @@ __pycache__/
 *.pth
 ml/occupancy_data.csv
 ml/history_cache.csv
+ml/availability.csv
 ml/serviceAccountKey.json
 privkey.json
